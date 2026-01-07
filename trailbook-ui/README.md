@@ -2,6 +2,16 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Configure API
+
+This UI talks to a backend API. Set:
+
+- `NEXT_PUBLIC_API_BASE_URL` (example: `http://localhost:3001/api`)
+
+See `ENVIRONMENT.md` for details.
+
+### Run
+
 First, run the development server:
 
 ```bash

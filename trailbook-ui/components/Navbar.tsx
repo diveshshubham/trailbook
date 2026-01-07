@@ -1,16 +1,59 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import AuthModal from "@/components/Auth/AuthModal";
 import EmailOrPhoneStep from "@/components/Auth/EmailOrPhoneStep";
 import OtpStep from "@/components/Auth/OtpStep";
+import { apiFetch } from "@/lib/api";
+
 
 type User = {
   name: string;
   avatar: string;
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function pickString(obj: Record<string, unknown>, key: string): string | null {
+  const v = obj[key];
+  return typeof v === "string" && v.trim() ? v : null;
+}
+
+function getTokenFromVerifyResponse(res: unknown): string | null {
+  if (!isRecord(res)) return null;
+
+  // Support multiple backend shapes:
+  // - { data: { accessToken } }
+  // - { accessToken }
+  // - { token }
+  // - { data: { token } }
+  const direct =
+    pickString(res, "accessToken") ??
+    pickString(res, "token");
+  if (direct) return direct;
+
+  if (isRecord(res.data)) {
+    return (
+      pickString(res.data, "accessToken") ??
+      pickString(res.data, "token")
+    );
+  }
+
+  return null;
+}
+
+function buildFallbackUser(contact: string): User {
+  const label = contact.includes("@") ? contact : `+${contact}`;
+  const seed = encodeURIComponent(contact || "user");
+  return {
+    name: label,
+    avatar: `https://api.dicebear.com/7.x/thumbs/svg?seed=${seed}`,
+  };
+}
 
 export default function Navbar() {
   // 🔹 Auth / modal state
@@ -23,13 +66,53 @@ export default function Navbar() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
+  // 🔹 Avatar menu state
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
   // 🔹 Restore login on refresh
   useEffect(() => {
+    const storedToken = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+
+    // If we have a token, consider the session valid even if user is missing/corrupt.
+    if (!storedToken) return;
+
+    try {
+      if (!storedUser || storedUser === "undefined" || storedUser === "null") {
+        setUser(buildFallbackUser("user"));
+        setLoggedIn(true);
+        return;
+      }
+
+      const parsed = JSON.parse(storedUser) as User;
+      if (parsed && typeof parsed === "object" && parsed.name && parsed.avatar) {
+        setUser(parsed);
+      } else {
+        localStorage.removeItem("user");
+        setUser(buildFallbackUser("user"));
+      }
+
+      setLoggedIn(true);
+    } catch {
+      // Clean up corrupted/legacy values so we don't crash on every refresh.
+      localStorage.removeItem("user");
+      setUser(buildFallbackUser("user"));
       setLoggedIn(true);
     }
+  }, []);
+
+  // 🔹 Close avatar menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
@@ -54,9 +137,7 @@ export default function Navbar() {
               <span className="text-2xl font-semibold tracking-[0.28em] bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 bg-clip-text text-transparent">
                 Trailbook
               </span>
-
-              <span className="text-xs tracking-widest text-gray-500 mt-1 flex items-center gap-2">
-                <span className="w-8 h-px bg-gradient-to-r from-transparent via-gray-400 to-transparent" />
+              <span className="text-xs tracking-widest text-gray-500 mt-1">
                 stories from the wild
               </span>
             </div>
@@ -64,7 +145,7 @@ export default function Navbar() {
 
           {/* RIGHT SIDE */}
           {!loggedIn ? (
-            /* LOGIN / SIGNUP BUTTON */
+            /* LOGIN / SIGNUP */
             <button
               onClick={() => {
                 setOpen(true);
@@ -75,40 +156,44 @@ export default function Navbar() {
             >
               <span className="absolute inset-0 bg-gradient-to-r from-orange-400 via-pink-500 to-red-500 transition-all duration-300 group-hover:scale-110" />
               <span className="absolute inset-0 bg-white/20 backdrop-blur-sm" />
-              <span className="relative z-10 text-sm font-semibold text-white tracking-wide group-hover:tracking-wider transition-all duration-300">
+              <span className="relative z-10 text-sm font-semibold text-white">
                 Login / Sign up
               </span>
             </button>
           ) : (
-            /* AVATAR MENU */
-            <div className="relative group">
+            /* AVATAR MENU (CLICK BASED) */
+            <div ref={menuRef} className="relative">
               <img
-                src={user?.avatar || "/avatar.png"}
+                src={user?.avatar}
                 alt="User avatar"
+                onClick={() => setMenuOpen((prev) => !prev)}
                 className="w-10 h-10 rounded-full object-cover cursor-pointer transition-transform hover:scale-105"
               />
 
-              {/* DROPDOWN */}
-              <div className="absolute right-0 mt-3 w-44 rounded-xl bg-white shadow-lg opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition origin-top-right">
-                <div className="px-4 py-3 border-b">
-                  <p className="text-sm font-medium">{user?.name}</p>
+              {menuOpen && (
+                <div className="absolute right-0 mt-3 w-44 rounded-xl bg-white shadow-lg z-50 animate-fadeIn">
+                  <div className="px-4 py-3 border-b">
+                    <p className="text-sm font-medium">{user?.name}</p>
+                  </div>
+
+                  <button className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
+                    My Albums
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem("user");
+                      localStorage.removeItem("token");
+                      setLoggedIn(false);
+                      setUser(null);
+                      setMenuOpen(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100"
+                  >
+                    Logout
+                  </button>
                 </div>
-
-                <button className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
-                  My Albums
-                </button>
-
-                <button
-                  onClick={() => {
-                    localStorage.removeItem("user");
-                    setLoggedIn(false);
-                    setUser(null);
-                  }}
-                  className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100"
-                >
-                  Logout
-                </button>
-              </div>
+              )}
             </div>
           )}
         </div>
@@ -133,26 +218,44 @@ export default function Navbar() {
         ) : (
           <OtpStep
             loading={loading}
-            onVerify={(otp) => {
+            onVerify={async (otp) => {
               setLoading(true);
+            
+              const contactRaw = value.trim();
+              const isEmail = contactRaw.includes("@");
+              const phone = contactRaw.replace(/\D/g, "");
+            
+              const payload = isEmail
+                ? { email: contactRaw, otp }
+                : { phone, otp };
+            
+              try {
+                const res = await apiFetch<unknown>("/auth/verify-otp", {
+                  method: "POST",
+                  auth: false,
+                  body: JSON.stringify(payload),
+                });
 
-              // 🔹 Simulate backend verification
-              setTimeout(() => {
-                console.log("OTP verified:", otp);
+                const token = getTokenFromVerifyResponse(res);
+                if (!token) throw new Error("Missing access token from verify-otp response");
 
-                const fakeUser = {
-                  name: "Shubham",
-                  avatar: "https://i.pravatar.cc/100?img=12",
-                };
+                const nextUser = buildFallbackUser(isEmail ? contactRaw : phone);
 
-                localStorage.setItem("user", JSON.stringify(fakeUser));
-                setUser(fakeUser);
+                localStorage.setItem("token", token);
+                localStorage.setItem("user", JSON.stringify(nextUser));
+            
+                setUser(nextUser);
                 setLoggedIn(true);
-
-                setLoading(false);
                 setOpen(false);
-              }, 1500);
+              } catch (err) {
+                console.error(err);
+                alert("Invalid OTP");
+              } finally {
+                setLoading(false);
+              }
             }}
+            
+            
           />
         )}
       </AuthModal>
