@@ -14,47 +14,6 @@ type User = {
   avatar: string;
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function pickString(obj: Record<string, unknown>, key: string): string | null {
-  const v = obj[key];
-  return typeof v === "string" && v.trim() ? v : null;
-}
-
-function getTokenFromVerifyResponse(res: unknown): string | null {
-  if (!isRecord(res)) return null;
-
-  // Support multiple backend shapes:
-  // - { data: { accessToken } }
-  // - { accessToken }
-  // - { token }
-  // - { data: { token } }
-  const direct =
-    pickString(res, "accessToken") ??
-    pickString(res, "token");
-  if (direct) return direct;
-
-  if (isRecord(res.data)) {
-    return (
-      pickString(res.data, "accessToken") ??
-      pickString(res.data, "token")
-    );
-  }
-
-  return null;
-}
-
-function buildFallbackUser(contact: string): User {
-  const label = contact.includes("@") ? contact : `+${contact}`;
-  const seed = encodeURIComponent(contact || "user");
-  return {
-    name: label,
-    avatar: `https://api.dicebear.com/7.x/thumbs/svg?seed=${seed}`,
-  };
-}
-
 export default function Navbar() {
   // 🔹 Auth / modal state
   const [open, setOpen] = useState(false);
@@ -72,32 +31,9 @@ export default function Navbar() {
 
   // 🔹 Restore login on refresh
   useEffect(() => {
-    const storedToken = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
-
-    // If we have a token, consider the session valid even if user is missing/corrupt.
-    if (!storedToken) return;
-
-    try {
-      if (!storedUser || storedUser === "undefined" || storedUser === "null") {
-        setUser(buildFallbackUser("user"));
-        setLoggedIn(true);
-        return;
-      }
-
-      const parsed = JSON.parse(storedUser) as User;
-      if (parsed && typeof parsed === "object" && parsed.name && parsed.avatar) {
-        setUser(parsed);
-      } else {
-        localStorage.removeItem("user");
-        setUser(buildFallbackUser("user"));
-      }
-
-      setLoggedIn(true);
-    } catch {
-      // Clean up corrupted/legacy values so we don't crash on every refresh.
-      localStorage.removeItem("user");
-      setUser(buildFallbackUser("user"));
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
       setLoggedIn(true);
     }
   }, []);
@@ -183,7 +119,6 @@ export default function Navbar() {
                   <button
                     onClick={() => {
                       localStorage.removeItem("user");
-                      localStorage.removeItem("token");
                       setLoggedIn(false);
                       setUser(null);
                       setMenuOpen(false);
@@ -221,30 +156,22 @@ export default function Navbar() {
             onVerify={async (otp) => {
               setLoading(true);
             
-              const contactRaw = value.trim();
-              const isEmail = contactRaw.includes("@");
-              const phone = contactRaw.replace(/\D/g, "");
+              const isEmail = value.includes("@");
             
               const payload = isEmail
-                ? { email: contactRaw, otp }
-                : { phone, otp };
+                ? { email: value, otp }
+                : { phone: value, otp };
             
               try {
-                const res = await apiFetch<unknown>("/auth/verify-otp", {
+                const res = await apiFetch("/auth/verify-otp", {
                   method: "POST",
-                  auth: false,
                   body: JSON.stringify(payload),
                 });
-
-                const token = getTokenFromVerifyResponse(res);
-                if (!token) throw new Error("Missing access token from verify-otp response");
-
-                const nextUser = buildFallbackUser(isEmail ? contactRaw : phone);
-
-                localStorage.setItem("token", token);
-                localStorage.setItem("user", JSON.stringify(nextUser));
             
-                setUser(nextUser);
+                localStorage.setItem("token", res.token);
+                localStorage.setItem("user", JSON.stringify(res.user));
+            
+                setUser(res.user);
                 setLoggedIn(true);
                 setOpen(false);
               } catch (err) {
@@ -253,8 +180,7 @@ export default function Navbar() {
               } finally {
                 setLoading(false);
               }
-            }}
-            
+            }}        
             
           />
         )}
