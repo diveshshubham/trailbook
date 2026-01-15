@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createAlbum, getPresignedUrl } from "@/lib/trailbookApi";
+import { createAlbum, getPresignedUrl, updateAlbumCover } from "@/lib/trailbookApi";
 import { resolveMediaUrl } from "@/lib/mediaUrl";
+
+const DRAFT_KEY = "tb:create-album-draft:v1";
 
 export default function CreateAlbumPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const coverUploadFolderRef = useRef<string>(`cover-${crypto.randomUUID()}`);
 
   // Form State
   const [name, setName] = useState("");
@@ -18,57 +19,84 @@ export default function CreateAlbumPage() {
   const [isPublic, setIsPublic] = useState(true);
   const [coverImageKey, setCoverImageKey] = useState<string | null>(null);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverUploading, setCoverUploading] = useState(false);
   
   // UI State
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const hasCover = Boolean(coverPreviewUrl);
+
+  // Restore draft on first mount (prevents losing typed data on refresh / network errors)
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as Partial<{
+        name: string;
+        description: string;
+        location: string;
+        story: string;
+        isPublic: boolean;
+      }>;
+      if (typeof draft.name === "string") setName(draft.name);
+      if (typeof draft.description === "string") setDescription(draft.description);
+      if (typeof draft.location === "string") setLocation(draft.location);
+      if (typeof draft.story === "string") setStory(draft.story);
+      if (typeof draft.isPublic === "boolean") setIsPublic(draft.isPublic);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Autosave draft as user types (debounced)
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(
+          DRAFT_KEY,
+          JSON.stringify({
+            name,
+            description,
+            location,
+            story,
+            isPublic,
+            updatedAt: new Date().toISOString(),
+          })
+        );
+      } catch {
+        // ignore
+      }
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [name, description, location, story, isPublic]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
-      setCoverUploading(true);
       setError(null);
+      // Don't upload cover until the album exists (prevents invalid albumId errors).
+      setCoverFile(file);
+      setCoverImageKey(null);
 
-      // 1) Get presigned URL (backend needs an albumId-ish value; we use a stable temp folder)
-      const { uploadUrl, key } = await getPresignedUrl({
-        albumId: coverUploadFolderRef.current,
-        contentType: file.type,
+      setCoverPreviewUrl((prev) => {
+        if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(file);
       });
-
-      // 2) PUT to S3 via proxy (avoids browser CORS)
-      const form = new FormData();
-      form.append("uploadUrl", uploadUrl);
-      form.append("contentType", file.type);
-      form.append("file", file);
-
-      const proxyRes = await fetch("/api/s3-upload", {
-        method: "POST",
-        body: form,
-      });
-      if (!proxyRes.ok) throw new Error("Cover upload failed");
-
-      // 3) Save key (this is what backend expects in `coverImage`)
-      setCoverImageKey(key);
-
-      // 4) Local preview
-      const localUrl = URL.createObjectURL(file);
-      setCoverPreviewUrl(localUrl);
     } catch (err) {
       console.error(err);
       setError("Failed to upload cover image. Please try again.");
     } finally {
-      setCoverUploading(false);
+      // allow selecting the same file again
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
   const handleSubmit = async () => {
-    if (!name || !description || !location || !story || !coverImageKey) {
+    if (!name || !description || !location || !story) {
       setError("Please fill in all mandatory fields");
       return;
     }
@@ -82,10 +110,47 @@ export default function CreateAlbumPage() {
         location: location.trim(),
         story: story.trim(),
         isPublic,
-        coverImage: coverImageKey,
       });
 
-      router.push(`/album/${album.id}`);
+      const albumId = album.id || album._id;
+      if (!albumId) throw new Error("Missing album id from createAlbum response");
+
+      // Upload cover AFTER album exists (optional)
+      if (coverFile) {
+        try {
+          setCoverUploading(true);
+          const { uploadUrl, key } = await getPresignedUrl({
+            albumId,
+            contentType: coverFile.type || "image/jpeg",
+          });
+
+          const form = new FormData();
+          form.append("uploadUrl", uploadUrl);
+          form.append("contentType", coverFile.type || "image/jpeg");
+          form.append("file", coverFile);
+
+          const proxyRes = await fetch("/api/s3-upload", { method: "POST", body: form });
+          if (!proxyRes.ok) throw new Error("Cover upload failed");
+
+          await updateAlbumCover({ albumId, coverImage: key });
+          setCoverImageKey(key);
+        } catch (e) {
+          console.error(e);
+          // Album is created already, so don't block user. We show a banner on the album page.
+          router.push(`/album/${albumId}?cover=failed`);
+          return;
+        } finally {
+          setCoverUploading(false);
+        }
+      }
+
+      try {
+        window.localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        // ignore
+      }
+
+      router.push(`/album/${albumId}`);
     } catch (err) {
       console.error(err);
       setError("Couldn't create album. Please check your connection.");
@@ -238,7 +303,7 @@ export default function CreateAlbumPage() {
               )}
 
               <button
-                disabled={loading || uploading || coverUploading || !name || !description || !location || !story || !coverImageKey}
+                disabled={loading || coverUploading || !name || !description || !location || !story}
                 onClick={handleSubmit}
                 className="w-full bg-black text-white py-4 rounded-2xl font-bold uppercase tracking-[0.2em] text-xs transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
               >

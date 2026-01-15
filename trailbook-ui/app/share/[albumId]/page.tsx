@@ -1,7 +1,10 @@
 import AlbumHero from "@/components/Album/AlbumHero";
 import AlbumStory from "@/components/Album/AlbumStory";
 import AlbumPhotos from "@/components/Album/AlbumPhotos";
-import { getPublicAlbumById } from "@/lib/trailbookApi";
+import PublicAlbumGate from "@/components/Share/PublicAlbumGate";
+import AlbumBadgesStrip from "@/components/Badges/AlbumBadgesStrip";
+import { getPublicAlbum } from "@/lib/trailbookApi";
+import { resolveMediaUrl } from "@/lib/mediaUrl";
 import { notFound } from "next/navigation";
 
 function formatSubtitle(createdAt?: string, location?: string) {
@@ -24,28 +27,49 @@ export default async function PublicAlbumPage({
   params: Promise<{ albumId: string }>;
 }) {
   const params = await paramsPromise;
-  let album = null;
+  let payload: Awaited<ReturnType<typeof getPublicAlbum>> = null;
   try {
-    album = await getPublicAlbumById(params.albumId);
+    payload = await getPublicAlbum({ albumId: params.albumId, limit: 30 });
   } catch {
-    album = null;
+    payload = null;
   }
-  if (!album) notFound();
-  const title = album?.title ?? "Untitled album";
-  const coverUrl = album?.coverUrl ?? album?.cover;
+  if (!payload?.album) notFound();
+
+  const album = payload.album;
+  const title = album?.title ?? album?.name ?? "Untitled album";
+  const coverUrl = resolveMediaUrl(album?.coverImage || album?.coverUrl || album?.cover) || undefined;
   const subtitle = formatSubtitle(album?.createdAt, album?.location);
-  const photos = album?.photos ?? [];
+  const mediaItems = (payload.media || []).map((m) => ({
+    ...m,
+    url: resolveMediaUrl(m.url || m.key) || undefined,
+  }));
+  const photos = mediaItems.map((m) => resolveMediaUrl(m.url || m.key)).filter(Boolean) as string[];
 
   return (
-    <main className="bg-black text-white min-h-screen">
-      <AlbumHero
-        title={title}
-        coverUrl={coverUrl}
-        subtitle={subtitle || undefined}
-        isPublic={album?.isPublic ?? true}
-      />
-      <AlbumStory initialStory={album?.story} />
-      <AlbumPhotos photos={photos} showUpload={false} />
+    <main className="bg-[#fafafa] min-h-screen">
+      <PublicAlbumGate albumId={params.albumId}>
+        <AlbumHero
+          title={title}
+          coverUrl={coverUrl}
+          subtitle={subtitle || undefined}
+          isPublic={true}
+          protectImage
+        />
+        <div className="max-w-7xl mx-auto -mt-10 relative z-10 px-6">
+          <div className="mb-10">
+            <AlbumBadgesStrip albumId={params.albumId} />
+          </div>
+          <AlbumStory initialStory={album?.story} />
+          <div className="mt-10">
+            <AlbumPhotos
+              photos={photos}
+              mediaItems={mediaItems}
+              showUpload={false}
+              protectImages
+            />
+          </div>
+        </div>
+      </PublicAlbumGate>
     </main>
   );
 }

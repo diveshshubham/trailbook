@@ -1,8 +1,11 @@
+"use client";
+
 type AlbumHeroProps = {
   title?: string;
   coverUrl?: string;
   subtitle?: string;
   isPublic?: boolean;
+  protectImage?: boolean;
 };
 
 export default function AlbumHero({
@@ -10,6 +13,7 @@ export default function AlbumHero({
   coverUrl = "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
   subtitle,
   isPublic,
+  protectImage = false,
 }: AlbumHeroProps) {
   return (
     <section className="relative h-[70vh] w-full overflow-hidden">
@@ -19,6 +23,10 @@ export default function AlbumHero({
           src={coverUrl} 
           className="w-full h-full object-cover" 
           alt={title} 
+          draggable={false}
+          onContextMenu={(e) => {
+            if (protectImage) e.preventDefault();
+          }}
         />
         {/* Cinematic Gradient Overlays */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/10 to-black/80" />

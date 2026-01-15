@@ -34,7 +34,78 @@ export type MediaItem = {
   contentType: string;
   size: number;
   url?: string;
+  reflectionsCount?: number;
   createdAt: string;
+  // Optional metadata (enrich later via API)
+  title?: string;
+  description?: string;
+  location?: string;
+  tags?: string[];
+  story?: string;
+  isPublic?: boolean;
+};
+
+export type MediaDetailsUpdate = {
+  title?: string;
+  description?: string;
+  location?: string;
+  story?: string;
+  tags?: string[];
+  isPublic?: boolean;
+};
+
+export type PublicFeedUser = {
+  id: string;
+  name?: string;
+  profilePicture?: string;
+};
+
+export type PublicFeedAlbumItem = {
+  id: string;
+  title?: string;
+  location?: string;
+  createdAt?: string;
+  eventDate?: string;
+  description?: string;
+  storyPreview?: string;
+  coverImage?: string;
+  photoCount?: number;
+  user?: PublicFeedUser;
+};
+
+export type PublicFeedPageInfo = {
+  limit: number;
+  hasNextPage: boolean;
+  nextCursor: string | null;
+};
+
+export type PublicFeedResponse = {
+  items: PublicFeedAlbumItem[];
+  pageInfo?: PublicFeedPageInfo;
+};
+
+export type PublicAlbumApiResponse = {
+  album: PublicFeedAlbumItem & {
+    userId?: string;
+    coverImage?: string;
+    story?: string;
+    isPublic?: boolean;
+  };
+  media: Array<{
+    id: string;
+    albumId: string;
+    key: string;
+    contentType: string;
+    size: number;
+    createdAt: string;
+    title?: string;
+    description?: string;
+    location?: string;
+    story?: string;
+    tags?: string[];
+    isPublic?: boolean;
+  }>;
+  pageInfo?: PublicFeedPageInfo;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -46,14 +117,37 @@ function unwrapData(res: unknown): unknown {
   return res;
 }
 
+function getAlbumsWriteBaseUrl(): string | undefined {
+  // Some deployments expose album PATCH endpoints on the users service.
+  // Allow overriding, otherwise fall back to the primary API base.
+  const v =
+    process.env.NEXT_PUBLIC_ALBUMS_WRITE_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_USERS_API_BASE_URL ||
+    "";
+  const trimmed = v.trim().replace(/\/$/, "");
+  return trimmed ? trimmed : undefined;
+}
+
+function getPublicFeedBaseUrl(): string | undefined {
+  // Public-feed is served by a different backend in some deployments.
+  const v = process.env.NEXT_PUBLIC_PUBLIC_FEED_API_BASE_URL || process.env.NEXT_PUBLIC_FEED_API_BASE_URL || "";
+  const trimmed = v.trim().replace(/\/$/, "");
+  if (trimmed) return trimmed;
+  // Local dev default (matches your example: http://localhost:3003/api/albums/public-feed)
+  return "http://localhost:3003/api";
+}
+
 export async function getMyAlbums(): Promise<Album[]> {
   const res = await apiFetch<unknown>("/albums/me");
   const data = unwrapData(res);
   if (isRecord(data) && Array.isArray(data.albums)) {
-    return data.albums.map((a: any) => ({
-      ...a,
-      id: a._id || a.id,
-    })) as Album[];
+    return data.albums
+      .filter((a): a is Record<string, unknown> => isRecord(a))
+      .map((a) => ({
+        ...(a as unknown as Album),
+        id: (typeof a._id === "string" && a._id) || (typeof a.id === "string" && a.id) || "",
+      }))
+      .filter((a) => Boolean(a.id));
   }
   return [];
 }
@@ -64,8 +158,13 @@ export async function getAlbumById(albumId: string): Promise<Album | null> {
   const album = isRecord(data) && "album" in data ? data.album : data;
   if (isRecord(album)) {
     return {
-      ...(album as any),
-      id: (album as any)._id || (album as any).id,
+      ...(album as unknown as Album),
+      id:
+        (typeof (album as Record<string, unknown>)._id === "string" &&
+          (album as Record<string, unknown>)._id) ||
+        (typeof (album as Record<string, unknown>).id === "string" &&
+          (album as Record<string, unknown>).id) ||
+        "",
     } as Album;
   }
   return null;
@@ -97,8 +196,71 @@ export async function createAlbum(payload: {
   const album = isRecord(data) && "album" in data ? data.album : data;
   if (isRecord(album)) {
     return {
-      ...(album as any),
-      id: (album as any)._id || (album as any).id,
+      ...(album as unknown as Album),
+      id:
+        (typeof (album as Record<string, unknown>)._id === "string" &&
+          (album as Record<string, unknown>)._id) ||
+        (typeof (album as Record<string, unknown>).id === "string" &&
+          (album as Record<string, unknown>).id) ||
+        "",
+    } as Album;
+  }
+  return album as Album;
+}
+
+export async function updateAlbumCover(payload: {
+  albumId: string;
+  coverImage: string;
+}): Promise<Album> {
+  const res = await apiFetch<unknown>(`/albums/${encodeURIComponent(payload.albumId)}/cover`, {
+    baseUrl: getAlbumsWriteBaseUrl(),
+    method: "PATCH",
+    body: JSON.stringify({ coverImage: payload.coverImage }),
+  });
+  const data = unwrapData(res);
+  const album = isRecord(data) && "album" in data ? data.album : data;
+  if (isRecord(album)) {
+    return {
+      ...(album as unknown as Album),
+      id:
+        (typeof (album as Record<string, unknown>)._id === "string" &&
+          (album as Record<string, unknown>)._id) ||
+        (typeof (album as Record<string, unknown>).id === "string" &&
+          (album as Record<string, unknown>).id) ||
+        payload.albumId,
+    } as Album;
+  }
+  return album as Album;
+}
+
+export async function updateAlbum(
+  albumId: string,
+  payload: Partial<{
+    title: string;
+    description: string;
+    location: string;
+    story: string;
+    eventDate: string; // YYYY-MM-DD
+    coverImage: string;
+    isPublic: boolean;
+  }>
+): Promise<Album> {
+  const res = await apiFetch<unknown>(`/albums/${encodeURIComponent(albumId)}`, {
+    baseUrl: getAlbumsWriteBaseUrl(),
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+  const data = unwrapData(res);
+  const album = isRecord(data) && "album" in data ? data.album : data;
+  if (isRecord(album)) {
+    return {
+      ...(album as unknown as Album),
+      id:
+        (typeof (album as Record<string, unknown>)._id === "string" &&
+          (album as Record<string, unknown>)._id) ||
+        (typeof (album as Record<string, unknown>).id === "string" &&
+          (album as Record<string, unknown>).id) ||
+        albumId,
     } as Album;
   }
   return album as Album;
@@ -152,6 +314,20 @@ export async function uploadMedia(payload: {
   return (isRecord(data) && "media" in data ? data.media : data) as MediaItem;
 }
 
+export async function updateMediaDetails(
+  mediaId: string,
+  payload: MediaDetailsUpdate
+): Promise<MediaItem> {
+  const endpoint = `/media/${encodeURIComponent(mediaId)}/details`;
+  const res = await apiFetch<unknown>(endpoint, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+  const data = unwrapData(res);
+  const media = isRecord(data) && "media" in data ? data.media : data;
+  return media as MediaItem;
+}
+
 export async function getFeed(): Promise<FeedItem[]> {
   const res = await apiFetch<unknown>("/feed");
   const data = unwrapData(res);
@@ -168,9 +344,98 @@ export async function getFeed(): Promise<FeedItem[]> {
   return [];
 }
 
-export async function getPublicAlbumById(albumId: string): Promise<Album | null> {
-  // If your backend has a dedicated public endpoint, you can switch this to `/public/albums/:id`
-  return getAlbumById(albumId);
+export async function getPublicFeed(payload?: {
+  limit?: number;
+  cursor?: string | null;
+}): Promise<PublicFeedResponse> {
+  const qs = new URLSearchParams();
+  if (payload?.limit) qs.set("limit", String(payload.limit));
+  if (payload?.cursor) qs.set("cursor", String(payload.cursor));
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+
+  const res = await apiFetch<unknown>(`/albums/public-feed${suffix}`, {
+    baseUrl: getPublicFeedBaseUrl(),
+    auth: false,
+    method: "GET",
+  });
+
+  // Expected response shape:
+  // { success: true, data: { items: [...], pageInfo: {...} } }
+  const unwrapped = unwrapData(res);
+  const data = isRecord(unwrapped) && "data" in unwrapped ? (unwrapped as { data?: unknown }).data : unwrapped;
+
+  if (isRecord(data) && Array.isArray(data.items)) {
+    return {
+      items: data.items as PublicFeedAlbumItem[],
+      pageInfo: (isRecord(data.pageInfo) ? (data.pageInfo as PublicFeedPageInfo) : undefined),
+    };
+  }
+
+  return { items: [] };
+}
+
+export async function getPublicAlbum(payload: {
+  albumId: string;
+  limit?: number;
+}): Promise<{ album: Album; media: MediaItem[]; pageInfo?: PublicFeedPageInfo } | null> {
+  const qs = new URLSearchParams();
+  if (payload.limit) qs.set("limit", String(payload.limit));
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+
+  const res = await apiFetch<unknown>(`/albums/public/${encodeURIComponent(payload.albumId)}${suffix}`, {
+    baseUrl: getPublicFeedBaseUrl(),
+    auth: false,
+    method: "GET",
+  });
+
+  const data = unwrapData(res);
+  if (!isRecord(data)) return null;
+
+  const albumRaw = data.album;
+  const mediaRaw = data.media;
+  if (!isRecord(albumRaw) || !Array.isArray(mediaRaw)) return null;
+
+  const album: Album = {
+    ...(albumRaw as unknown as Album),
+    id:
+      (typeof (albumRaw as Record<string, unknown>).id === "string"
+        ? ((albumRaw as Record<string, unknown>).id as string)
+        : "") ||
+      (typeof (albumRaw as Record<string, unknown>)._id === "string"
+        ? ((albumRaw as Record<string, unknown>)._id as string)
+        : "") ||
+      payload.albumId,
+  };
+
+  const media: MediaItem[] = mediaRaw
+    .filter((m): m is Record<string, unknown> => isRecord(m))
+    .map((m) => ({
+      _id: (typeof m.id === "string" ? (m.id as string) : String(m.id || "")) || "",
+      albumId: (typeof m.albumId === "string" ? (m.albumId as string) : payload.albumId) || payload.albumId,
+      key: (typeof m.key === "string" ? (m.key as string) : "") || "",
+      contentType: (typeof m.contentType === "string" ? (m.contentType as string) : "") || "",
+      size: (typeof m.size === "number" ? (m.size as number) : 0) || 0,
+      createdAt: (typeof m.createdAt === "string" ? (m.createdAt as string) : "") || new Date().toISOString(),
+      reflectionsCount: typeof (m as Record<string, unknown>).reflectionsCount === "number"
+        ? ((m as Record<string, unknown>).reflectionsCount as number)
+        : undefined,
+      title: typeof m.title === "string" ? (m.title as string) : undefined,
+      description: typeof m.description === "string" ? (m.description as string) : undefined,
+      location: typeof m.location === "string" ? (m.location as string) : undefined,
+      story: typeof m.story === "string" ? (m.story as string) : undefined,
+      tags: Array.isArray(m.tags) ? (m.tags as string[]) : undefined,
+      isPublic: typeof m.isPublic === "boolean" ? (m.isPublic as boolean) : undefined,
+    }))
+    .filter((m) => Boolean(m._id) && Boolean(m.key));
+
+  return {
+    album: {
+      ...album,
+      photos: media.map((m) => m.key),
+    },
+    media,
+    pageInfo: isRecord(data.pageInfo) ? (data.pageInfo as PublicFeedPageInfo) : undefined,
+  };
 }
 
 export async function regenerateAlbumStory(albumId: string): Promise<{ story: string }> {

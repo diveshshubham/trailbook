@@ -6,10 +6,21 @@ import { getMyAlbums, type Album } from "@/lib/trailbookApi";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { resolveMediaUrl } from "@/lib/mediaUrl";
+import { getMyProfile } from "@/lib/userApi";
 
 export default function UserAlbums() {
   const router = useRouter();
-  const userName = "Shubham";
+
+  const [userName, setUserName] = useState(() => {
+    if (typeof window === "undefined") return "Trailblazer";
+    try {
+      const stored = window.localStorage.getItem("user");
+      const parsed = stored ? (JSON.parse(stored) as { name?: string }) : null;
+      return parsed?.name?.trim() || "Trailblazer";
+    } catch {
+      return "Trailblazer";
+    }
+  });
 
   const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +43,27 @@ export default function UserAlbums() {
     fetchAlbums();
   }, []);
 
+  // 🔹 Fetch profile name for hero (premium touch)
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const me = await getMyProfile();
+        if (!alive) return;
+        const name =
+          me.profile?.fullName?.trim() ||
+          (me.user.email ? me.user.email.split("@")[0] : "") ||
+          "Trailblazer";
+        setUserName(name);
+      } catch {
+        // ignore (keep fallback)
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   // 🔹 Loading state (minimal, premium)
   if (loading) {
     return (
@@ -52,49 +84,62 @@ export default function UserAlbums() {
 
   return (
     <>
-      {/* SHOW HERO ONLY WHEN ALBUMS EXIST */}
-      {albums.length > 0 && (
-        <div className="max-w-6xl mx-auto px-6 pt-10">
-          <UserHero
-            name={userName}
-            albumsCount={albums.length}
-            photosCount={albums.reduce((sum, a) => sum + (a.photoCount ?? a.photosCount ?? 0), 0)}
-            onCreate={() => router.push("/create-album")}
-          />
-        </div>
-      )}
+      <div className="max-w-6xl mx-auto px-6 pt-10">
+        <UserHero
+          name={userName}
+          albumsCount={albums.length}
+          photosCount={albums.reduce((sum, a) => sum + (a.photoCount ?? a.photosCount ?? 0), 0)}
+          onCreate={() => router.push("/create-album")}
+        />
+      </div>
 
       <section className="max-w-6xl mx-auto px-6 pb-24 pt-10">
         {albums.length === 0 ? (
           /* ================= EMPTY STATE ================= */
           <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="bg-white rounded-3xl px-10 py-14 text-center max-w-md shadow-sm">
-              <div className="mx-auto mb-6 w-16 h-16 rounded-full bg-gradient-to-br from-orange-100 to-pink-100 flex items-center justify-center">
-                <span className="text-3xl">📖</span>
+            <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-black/5 bg-white shadow-sm">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-white to-pink-50" />
+              <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-orange-200/30 blur-3xl" />
+              <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-pink-200/30 blur-3xl" />
+
+              <div className="relative px-10 py-14 text-center">
+                <p className="text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+                  Your library
+                </p>
+                <h2 className="mt-3 text-2xl font-bold tracking-tight text-gray-900">
+                  Your first story is waiting
+                </h2>
+
+                <p className="mt-3 text-gray-500 leading-relaxed max-w-md mx-auto">
+                  Start an album, add moments, and turn your trip into something you’ll want to revisit.
+                </p>
+
+                <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+                  {[
+                    { k: "01", t: "Create an album", d: "Give it a title, location, and story." },
+                    { k: "02", t: "Upload moments", d: "Drop photos and add captions." },
+                    { k: "03", t: "Share beautifully", d: "Make it public when you’re ready." },
+                  ].map((s) => (
+                    <div
+                      key={s.k}
+                      className="rounded-2xl border border-black/5 bg-white/70 backdrop-blur-sm px-4 py-4"
+                    >
+                      <p className="text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+                        {s.k}
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-gray-900">{s.t}</p>
+                      <p className="mt-1 text-xs text-gray-500 leading-relaxed">{s.d}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => router.push("/create-album")}
+                  className="mt-8 rounded-full px-8 py-3 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-semibold transition hover:opacity-95 active:scale-[0.99] shadow-lg shadow-orange-500/20"
+                >
+                  Create your first album
+                </button>
               </div>
-
-              <h2 className="text-xl font-semibold">
-                Your first story is waiting
-              </h2>
-
-              <p className="mt-3 text-gray-500 leading-relaxed">
-                Create an album to begin collecting moments, memories,
-                and milestones from your journeys.
-              </p>
-
-              <button
-                onClick={() => router.push("/create-album")}
-                className="
-                  mt-6 rounded-full px-8 py-3
-                  bg-gradient-to-r from-orange-500 to-pink-500
-                  text-white font-semibold
-                  transition-all duration-200
-                  hover:scale-105 active:scale-95
-                  shadow-lg
-                "
-              >
-                Create your first album
-              </button>
             </div>
           </div>
         ) : (

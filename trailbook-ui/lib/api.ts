@@ -1,3 +1,4 @@
+// Albums/feed/auth backend (default). Override via NEXT_PUBLIC_API_BASE_URL.
 const DEFAULT_API_BASE_URL = "http://localhost:3002/api";
 
 function getApiBaseUrl() {
@@ -39,6 +40,11 @@ export type ApiFetchOptions = RequestInit & {
    * Defaults to true (if a token is available). Set to false for public/auth endpoints.
    */
   auth?: boolean;
+  /**
+   * Optional override for API base URL (useful when multiple backends exist).
+   * Example: process.env.NEXT_PUBLIC_USERS_API_BASE_URL
+   */
+  baseUrl?: string;
 };
 
 export class ApiError extends Error {
@@ -64,8 +70,8 @@ export async function apiFetch<T = unknown>(
   endpoint: string,
   options: ApiFetchOptions = {}
 ): Promise<T> {
-  const baseUrl = getApiBaseUrl();
-  const { token: tokenOverride, auth = true, headers, ...rest } = options;
+  const baseUrl = (options.baseUrl || getApiBaseUrl()).replace(/\/$/, "");
+  const { token: tokenOverride, auth = true, headers, baseUrl: _baseUrl, ...rest } = options;
   const token = tokenOverride ?? safeGetTokenFromLocalStorage();
 
   const res = await fetch(`${baseUrl}${endpoint}`, {
