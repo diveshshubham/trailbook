@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { getPublicFeed, type PublicFeedAlbumItem } from "@/lib/trailbookApi";
 import { resolveMediaUrl } from "@/lib/mediaUrl";
 
@@ -65,6 +66,9 @@ const demoItems: PublicFeedAlbumItem[] = [
 ];
 
 export default function PublicLanding() {
+  const { themeKey } = useTheme();
+  const isDefault = themeKey === "default";
+  
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<PublicFeedAlbumItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -126,22 +130,45 @@ export default function PublicLanding() {
   }, [rest]);
 
   return (
-    <main className="min-h-screen bg-[#fafafa]">
-      {/* Hero */}
+    <main className="min-h-screen transition-colors duration-300" style={{ backgroundColor: "var(--theme-background)" }}>
+      {/* Hero - Theme-aware */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#050B17] via-[#071A2F] to-[#fafafa]" />
-        <div className="absolute -top-24 -left-24 h-80 w-80 rounded-full bg-cyan-400/10 blur-3xl" />
-        <div className="absolute top-28 -right-28 h-96 w-96 rounded-full bg-indigo-400/10 blur-3xl" />
-        <div className="absolute inset-0 opacity-[0.10] [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.35)_1px,transparent_0)] [background-size:18px_18px]" />
+        {isDefault ? (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-b from-[#050B17] via-[#071A2F] to-[#fafafa]" />
+            <div className="absolute -top-24 -left-24 h-80 w-80 rounded-full bg-cyan-400/10 blur-3xl" />
+            <div className="absolute top-28 -right-28 h-96 w-96 rounded-full bg-indigo-400/10 blur-3xl" />
+            <div className="absolute inset-0 opacity-[0.10] [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.35)_1px,transparent_0)] [background-size:18px_18px]" />
+          </>
+        ) : (
+          <>
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(to bottom, var(--theme-accent), var(--theme-background))`,
+                opacity: 0.15,
+              }}
+            />
+            <div
+              className="absolute -top-24 -left-24 h-80 w-80 rounded-full blur-3xl"
+              style={{ backgroundColor: "var(--theme-accent)", opacity: 0.1 }}
+            />
+            <div
+              className="absolute top-28 -right-28 h-96 w-96 rounded-full blur-3xl"
+              style={{ backgroundColor: "var(--theme-info)", opacity: 0.1 }}
+            />
+            <div className="absolute inset-0" style={{ backgroundColor: "var(--theme-background)" }} />
+          </>
+        )}
         <div className="max-w-7xl mx-auto px-6 pt-20 pb-16 relative">
           <div className="max-w-2xl">
-            <p className="text-[10px] uppercase tracking-[0.45em] text-white/70 font-semibold">
+            <p className="text-[10px] uppercase tracking-[0.45em] font-semibold" style={{ color: isDefault ? "rgba(255,255,255,0.7)" : "var(--theme-text-tertiary)" }}>
               Trailbook · stories from the wild
             </p>
-            <h1 className="mt-5 text-4xl sm:text-6xl font-bold tracking-tight text-white">
+            <h1 className="mt-5 text-4xl sm:text-6xl font-bold tracking-tight" style={{ color: isDefault ? "white" : "var(--theme-text-primary)" }}>
               Travel, written like a chapter.
             </h1>
-            <p className="mt-6 text-white/70 text-lg leading-relaxed">
+            <p className="mt-6 text-lg leading-relaxed" style={{ color: isDefault ? "rgba(255,255,255,0.7)" : "var(--theme-text-secondary)" }}>
               Not a social feed. A premium library of journeys—photos, story, and place—meant to be
               revisited.
             </p>
@@ -149,13 +176,36 @@ export default function PublicLanding() {
             <div className="mt-10 flex flex-col sm:flex-row gap-3">
               <a
                 href="#public-stories"
-                className="inline-flex justify-center items-center rounded-full px-7 py-3 bg-white text-black font-semibold shadow-lg shadow-[#050B17]/35 hover:opacity-95 transition"
+                className="inline-flex justify-center items-center rounded-full px-7 py-3 font-semibold shadow-theme-lg hover:opacity-95 transition"
+                style={{
+                  background: isDefault ? "white" : "var(--theme-gradient-primary)",
+                  color: isDefault ? "black" : "var(--theme-text-inverse)",
+                }}
               >
                 Explore public stories
               </a>
               <Link
                 href="/create-album"
-                className="inline-flex justify-center items-center rounded-full px-7 py-3 bg-white/10 text-white font-semibold border border-white/15 hover:bg-white/15 transition"
+                className="inline-flex justify-center items-center rounded-full px-7 py-3 font-semibold border transition"
+                style={{
+                  backgroundColor: isDefault ? "rgba(255,255,255,0.1)" : "var(--theme-surface)",
+                  borderColor: isDefault ? "rgba(255,255,255,0.15)" : "var(--theme-border)",
+                  color: isDefault ? "white" : "var(--theme-text-primary)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isDefault) {
+                    e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+                  } else {
+                    e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.15)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isDefault) {
+                    e.currentTarget.style.backgroundColor = "var(--theme-surface)";
+                  } else {
+                    e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)";
+                  }
+                }}
               >
                 Create your story
               </Link>
@@ -173,20 +223,31 @@ export default function PublicLanding() {
 
       {/* Public stories */}
       <section id="public-stories" className="max-w-7xl mx-auto px-6 -mt-10 relative z-10">
-        <div className="rounded-[36px] border border-black/5 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-[36px] border shadow-theme overflow-hidden transition-colors duration-300" style={{ borderColor: "var(--theme-border)", backgroundColor: "var(--theme-surface)" }}>
           <div className="p-8 sm:p-10">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+                <p className="text-[10px] uppercase tracking-[0.35em] font-semibold" style={{ color: "var(--theme-text-tertiary)" }}>
                   Public stories
                 </p>
-                <h2 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
+                <h2 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: "var(--theme-text-primary)" }}>
                   Curated chapters from the community
                 </h2>
               </div>
               <Link
                 href="/"
-                className="inline-flex justify-center items-center rounded-full px-5 py-2 text-xs font-semibold tracking-wide bg-gray-50 border border-black/5 hover:bg-gray-100 transition w-fit"
+                className="inline-flex justify-center items-center rounded-full px-5 py-2 text-xs font-semibold tracking-wide border transition w-fit"
+                style={{
+                  backgroundColor: "var(--theme-surface-hover)",
+                  borderColor: "var(--theme-border)",
+                  color: "var(--theme-text-primary)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--theme-surface-elevated)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+                }}
               >
                 Refresh
               </Link>
@@ -311,7 +372,7 @@ export default function PublicLanding() {
                       </div>
 
                       <div className="px-6 pt-5 pb-6">
-                        <p className="text-sm text-gray-600 leading-relaxed overflow-hidden max-h-[3.25rem]">
+                        <p className="text-sm leading-relaxed overflow-hidden max-h-[3.25rem]" style={{ color: "var(--theme-text-secondary)" }}>
                           {clampText(a.description || a.storyPreview, 120)}
                         </p>
 
@@ -320,13 +381,11 @@ export default function PublicLanding() {
                             <div className="relative shrink-0 group/author" data-author-hovercard>
                               <button
                                 type="button"
-                                className={[
-                                  "relative h-10 w-10 rounded-full overflow-hidden",
-                                  "ring-2 ring-black/5 bg-gray-100",
-                                  "shadow-sm transition-all duration-200 ease-out",
-                                  "hover:scale-110 hover:ring-indigo-400/35 hover:shadow-md",
-                                  "motion-reduce:transform-none motion-reduce:transition-none",
-                                ].join(" ")}
+                                className="relative h-10 w-10 rounded-full overflow-hidden shadow-theme transition-all duration-200 ease-out hover:scale-110 motion-reduce:transform-none motion-reduce:transition-none"
+                                style={{
+                                  ringColor: "var(--theme-border)",
+                                  backgroundColor: "var(--theme-surface-elevated)",
+                                }}
                                 aria-label="Open author preview"
                                 onClick={(e) => {
                                   e.preventDefault();
@@ -348,7 +407,7 @@ export default function PublicLanding() {
                                     className="h-full w-full object-cover"
                                   />
                                 ) : (
-                                  <div className="h-full w-full grid place-items-center text-xs text-gray-400">
+                                  <div className="h-full w-full grid place-items-center text-xs" style={{ color: "var(--theme-text-tertiary)" }}>
                                     ✦
                                   </div>
                                 )}
@@ -356,14 +415,21 @@ export default function PublicLanding() {
                             </div>
 
                             <div className="min-w-0">
-                              <p className="text-sm font-semibold text-gray-900 truncate">
+                              <p className="text-sm font-semibold truncate" style={{ color: "var(--theme-text-primary)" }}>
                                 {a.user?.name?.trim() || "Anonymous"}
                               </p>
-                              <p className="text-xs text-gray-500 truncate">Open chapter</p>
+                              <p className="text-xs truncate" style={{ color: "var(--theme-text-tertiary)" }}>Open chapter</p>
                             </div>
                           </div>
 
-                          <span className="text-xs font-semibold text-gray-900 group-hover:text-indigo-700 transition">
+                          <span className="text-xs font-semibold transition" style={{ color: "var(--theme-text-primary)" }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color = "var(--theme-accent)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color = "var(--theme-text-primary)";
+                            }}
+                          >
                             Open →
                           </span>
                         </div>
@@ -396,13 +462,17 @@ export default function PublicLanding() {
           ].map((f) => (
             <div
               key={f.k}
-              className="rounded-3xl border border-black/5 bg-white p-8 shadow-sm"
+              className="rounded-3xl border p-8 shadow-theme transition-colors duration-300"
+              style={{
+                borderColor: "var(--theme-border)",
+                backgroundColor: "var(--theme-surface)",
+              }}
             >
-              <p className="text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+              <p className="text-[10px] uppercase tracking-[0.35em] font-semibold" style={{ color: "var(--theme-text-tertiary)" }}>
                 Philosophy
               </p>
-              <h3 className="mt-3 text-xl font-bold tracking-tight text-gray-900">{f.k}</h3>
-              <p className="mt-3 text-gray-600 leading-relaxed">{f.d}</p>
+              <h3 className="mt-3 text-xl font-bold tracking-tight" style={{ color: "var(--theme-text-primary)" }}>{f.k}</h3>
+              <p className="mt-3 leading-relaxed" style={{ color: "var(--theme-text-secondary)" }}>{f.d}</p>
             </div>
           ))}
         </div>
@@ -429,13 +499,36 @@ export default function PublicLanding() {
             <div className="flex gap-3">
               <Link
                 href="/create-album"
-                className="inline-flex justify-center items-center rounded-full px-7 py-3 bg-white text-black font-semibold shadow-lg shadow-[#050B17]/35 hover:opacity-95 transition"
+                className="inline-flex justify-center items-center rounded-full px-7 py-3 font-semibold shadow-theme-lg hover:opacity-95 transition"
+                style={{
+                  background: isDefault ? "white" : "var(--theme-gradient-primary)",
+                  color: isDefault ? "black" : "var(--theme-text-inverse)",
+                }}
               >
                 Create album
               </Link>
               <a
                 href="#public-stories"
-                className="inline-flex justify-center items-center rounded-full px-7 py-3 bg-white/10 text-white font-semibold border border-white/15 hover:bg-white/15 transition"
+                className="inline-flex justify-center items-center rounded-full px-7 py-3 font-semibold border transition"
+                style={{
+                  backgroundColor: isDefault ? "rgba(255,255,255,0.1)" : "var(--theme-surface)",
+                  borderColor: isDefault ? "rgba(255,255,255,0.15)" : "var(--theme-border)",
+                  color: isDefault ? "white" : "var(--theme-text-primary)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isDefault) {
+                    e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+                  } else {
+                    e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.15)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isDefault) {
+                    e.currentTarget.style.backgroundColor = "var(--theme-surface)";
+                  } else {
+                    e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)";
+                  }
+                }}
               >
                 Explore
               </a>
@@ -535,14 +628,29 @@ export default function PublicLanding() {
                   <button
                     type="button"
                     onClick={() => openAuthModal()}
-                    className="w-full rounded-full px-5 py-3 text-sm font-semibold bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg shadow-orange-500/20 hover:opacity-95 transition motion-reduce:transition-none"
+                    className="w-full rounded-full px-5 py-3 text-sm font-semibold shadow-theme-lg hover:opacity-95 transition motion-reduce:transition-none"
+                    style={{
+                      background: isDefault ? "linear-gradient(to right, #f97316, #ec4899)" : "var(--theme-gradient-primary)",
+                      color: "var(--theme-text-inverse)",
+                    }}
                   >
                     Follow (Sign up)
                   </button>
                   <button
                     type="button"
                     onClick={() => setActiveAuthor(null)}
-                    className="w-full rounded-full px-5 py-3 text-sm font-semibold bg-white border border-black/10 hover:bg-gray-50 transition"
+                    className="w-full rounded-full px-5 py-3 text-sm font-semibold border transition"
+                    style={{
+                      backgroundColor: "var(--theme-surface)",
+                      borderColor: "var(--theme-border)",
+                      color: "var(--theme-text-primary)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--theme-surface)";
+                    }}
                   >
                     Not now
                   </button>

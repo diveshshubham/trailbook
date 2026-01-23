@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "@/contexts/ThemeContext";
 
 import AlbumCard from "@/components/Profile/AlbumCard";
 import UserHero from "@/components/Profile/UserHero";
@@ -30,6 +31,8 @@ function pickTitle(a: PublicFeedAlbumItem) {
 
 export default function AuthedHome() {
   const router = useRouter();
+  const { themeKey } = useTheme();
+  const isDefault = themeKey === "default";
 
   const [userName, setUserName] = useState("Trailblazer");
   const [albums, setAlbums] = useState<Album[]>([]);
@@ -104,34 +107,80 @@ export default function AuthedHome() {
   );
 
   return (
-    <main className="min-h-screen bg-[#fafafa]">
-      {/* Premium header block */}
+    <main className="min-h-screen transition-colors duration-300" style={{ backgroundColor: "var(--theme-background)" }}>
+      {/* Premium header block - Theme-aware */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#050B17] via-[#071A2F] to-[#fafafa]" />
-        <div className="absolute -top-24 -left-24 h-80 w-80 rounded-full bg-cyan-400/10 blur-3xl" />
-        <div className="absolute top-28 -right-28 h-96 w-96 rounded-full bg-indigo-400/10 blur-3xl" />
+        {isDefault ? (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-b from-[#050B17] via-[#071A2F] to-[#fafafa]" />
+            <div className="absolute -top-24 -left-24 h-80 w-80 rounded-full bg-cyan-400/10 blur-3xl" />
+            <div className="absolute top-28 -right-28 h-96 w-96 rounded-full bg-indigo-400/10 blur-3xl" />
+          </>
+        ) : (
+          <>
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(to bottom, var(--theme-accent), var(--theme-background))`,
+                opacity: 0.15,
+              }}
+            />
+            <div
+              className="absolute -top-24 -left-24 h-80 w-80 rounded-full blur-3xl"
+              style={{ backgroundColor: "var(--theme-accent)", opacity: 0.1 }}
+            />
+            <div
+              className="absolute top-28 -right-28 h-96 w-96 rounded-full blur-3xl"
+              style={{ backgroundColor: "var(--theme-info)", opacity: 0.1 }}
+            />
+            <div className="absolute inset-0" style={{ backgroundColor: "var(--theme-background)" }} />
+          </>
+        )}
         <div className="max-w-7xl mx-auto px-6 pt-14 pb-10 relative">
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-10">
             <div className="max-w-2xl">
-              <p className="text-[10px] uppercase tracking-[0.45em] text-white/70 font-semibold">
+              <p className="text-[10px] uppercase tracking-[0.45em] font-semibold" style={{ color: isDefault ? "rgba(255,255,255,0.7)" : "var(--theme-text-tertiary)" }}>
                 Your library
               </p>
-              <h1 className="mt-4 text-3xl sm:text-5xl font-bold tracking-tight text-white">
-                Welcome back, {userName}.
+              <h1 className="mt-4 text-3xl sm:text-5xl font-bold tracking-tight" style={{ color: isDefault ? "white" : "var(--theme-text-primary)" }}>
+                Start your next chapter
               </h1>
-              <p className="mt-4 text-white/70 text-lg leading-relaxed">
+              <p className="mt-4 text-lg leading-relaxed" style={{ color: isDefault ? "rgba(255,255,255,0.7)" : "var(--theme-text-secondary)" }}>
                 Keep building chapters. Discover new ones from the community.
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 <Link
                   href="/create-album"
-                  className="inline-flex justify-center items-center rounded-full px-7 py-3 bg-white text-black font-semibold shadow-lg shadow-[#050B17]/35 hover:opacity-95 transition"
+                  className="inline-flex justify-center items-center rounded-full px-7 py-3 font-semibold shadow-theme-lg hover:opacity-95 transition"
+                  style={{
+                    background: isDefault ? "white" : "var(--theme-gradient-primary)",
+                    color: isDefault ? "black" : "var(--theme-text-inverse)",
+                  }}
                 >
                   Create album
                 </Link>
                 <a
                   href="#discover"
-                  className="inline-flex justify-center items-center rounded-full px-7 py-3 bg-white/10 text-white font-semibold border border-white/15 hover:bg-white/15 transition"
+                  className="inline-flex justify-center items-center rounded-full px-7 py-3 font-semibold border transition"
+                  style={{
+                    backgroundColor: isDefault ? "rgba(255,255,255,0.1)" : "var(--theme-surface)",
+                    borderColor: isDefault ? "rgba(255,255,255,0.15)" : "var(--theme-border)",
+                    color: isDefault ? "white" : "var(--theme-text-primary)",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isDefault) {
+                      e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+                    } else {
+                      e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.15)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isDefault) {
+                      e.currentTarget.style.backgroundColor = "var(--theme-surface)";
+                    } else {
+                      e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)";
+                    }
+                  }}
                 >
                   Explore public stories
                 </a>
@@ -139,7 +188,13 @@ export default function AuthedHome() {
             </div>
 
             <div className="w-full lg:w-[460px]">
-              <div className="rounded-[32px] border border-white/10 bg-white/10 backdrop-blur-xl p-6">
+              <div
+                className="rounded-[32px] border backdrop-blur-xl p-6"
+                style={{
+                  borderColor: isDefault ? "rgba(255,255,255,0.1)" : "var(--theme-border)",
+                  backgroundColor: isDefault ? "rgba(255,255,255,0.1)" : "var(--theme-surface)",
+                }}
+              >
                 <UserHero
                   name={userName}
                   albumsCount={albums.length}
@@ -154,20 +209,20 @@ export default function AuthedHome() {
 
       {/* My albums */}
       <section className="max-w-7xl mx-auto px-6 -mt-8 relative z-10">
-        <div className="rounded-[36px] border border-black/5 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-[36px] border border-[var(--theme-border)] bg-[var(--theme-surface)] shadow-theme overflow-hidden">
           <div className="p-8 sm:p-10">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+                <p className="text-[10px] uppercase tracking-[0.35em] text-[var(--theme-text-tertiary)] font-semibold">
                   Your stories
                 </p>
-                <h2 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
+                <h2 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-[var(--theme-text-primary)]">
                   Continue your trail
                 </h2>
               </div>
               <Link
                 href="/create-album"
-                className="inline-flex justify-center items-center rounded-full px-5 py-2 text-xs font-semibold tracking-wide bg-gray-50 border border-black/5 hover:bg-gray-100 transition w-fit"
+                className="inline-flex justify-center items-center rounded-full px-5 py-2 text-xs font-semibold tracking-wide bg-[var(--theme-surface-hover)] border border-[var(--theme-border)] hover:bg-[var(--theme-surface-elevated)] transition w-fit text-[var(--theme-text-primary)]"
               >
                 + New album
               </Link>
@@ -176,29 +231,39 @@ export default function AuthedHome() {
 
           <div className="px-8 sm:px-10 pb-10">
             {albumsLoading ? (
-              <div className="py-16 text-center text-gray-500">Loading your stories…</div>
+              <div className="py-16 text-center text-[var(--theme-text-secondary)]">Loading your stories…</div>
             ) : albumsError ? (
-              <div className="py-16 text-center text-red-500">{albumsError}</div>
+              <div className="py-16 text-center text-[var(--theme-error)]">{albumsError}</div>
             ) : albums.length === 0 ? (
               <div className="pb-10">
-                <div className="relative w-full overflow-hidden rounded-3xl border border-black/5 bg-white shadow-sm">
-                  <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-white to-pink-50" />
-                  <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-orange-200/30 blur-3xl" />
-                  <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-pink-200/30 blur-3xl" />
+                <div className="relative w-full overflow-hidden rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] shadow-theme">
+                  <div
+                    className="absolute inset-0 opacity-50"
+                    style={{ background: "var(--theme-gradient-secondary)" }}
+                  />
+                  <div
+                    className="absolute -top-24 -right-24 w-72 h-72 rounded-full blur-3xl"
+                    style={{ backgroundColor: "var(--theme-accent)", opacity: 0.1 }}
+                  />
+                  <div
+                    className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full blur-3xl"
+                    style={{ backgroundColor: "var(--theme-accent)", opacity: 0.1 }}
+                  />
 
                   <div className="relative px-10 py-12 text-center">
-                    <p className="text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+                    <p className="text-[10px] uppercase tracking-[0.35em] text-[var(--theme-text-tertiary)] font-semibold">
                       First chapter
                     </p>
-                    <h3 className="mt-3 text-2xl font-bold tracking-tight text-gray-900">
+                    <h3 className="mt-3 text-2xl font-bold tracking-tight text-[var(--theme-text-primary)]">
                       Create your first album
                     </h3>
-                    <p className="mt-3 text-gray-500 leading-relaxed max-w-md mx-auto">
+                    <p className="mt-3 text-[var(--theme-text-secondary)] leading-relaxed max-w-md mx-auto">
                       Give it a title, a place, and a story—then add moments as they happen.
                     </p>
                     <Link
                       href="/create-album"
-                      className="mt-7 inline-flex rounded-full px-8 py-3 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-semibold transition hover:opacity-95 active:scale-[0.99] shadow-lg shadow-orange-500/20"
+                      className="mt-7 inline-flex rounded-full px-8 py-3 text-white font-semibold transition hover:opacity-95 active:scale-[0.99] shadow-theme-lg"
+                      style={{ background: "var(--theme-gradient-primary)" }}
                     >
                       Create album
                     </Link>
@@ -237,19 +302,19 @@ export default function AuthedHome() {
       <section id="discover" className="max-w-7xl mx-auto px-6 py-16">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-8">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+            <p className="text-[10px] uppercase tracking-[0.35em] text-[var(--theme-text-tertiary)] font-semibold">
               Discover
             </p>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
+            <h2 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-[var(--theme-text-primary)]">
               Public stories from the community
             </h2>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-2 text-[var(--theme-text-secondary)]">
               Explore beautifully shared chapters. Save and follow coming soon.
             </p>
           </div>
           <Link
             href="/"
-            className="inline-flex justify-center items-center rounded-full px-5 py-2 text-xs font-semibold tracking-wide bg-gray-50 border border-black/5 hover:bg-gray-100 transition w-fit"
+            className="inline-flex justify-center items-center rounded-full px-5 py-2 text-xs font-semibold tracking-wide bg-[var(--theme-surface-hover)] border border-[var(--theme-border)] hover:bg-[var(--theme-surface-elevated)] transition w-fit text-[var(--theme-text-primary)]"
           >
             Refresh
           </Link>
@@ -284,7 +349,7 @@ export default function AuthedHome() {
               <Link
                 key={a.id + idx}
                 href={href}
-                className="group rounded-3xl border border-black/5 bg-white overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                className="group rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] overflow-hidden shadow-theme hover:shadow-theme-xl hover:-translate-y-1 transition-all duration-300"
               >
                 <div className="relative overflow-hidden">
                   <img
@@ -299,15 +364,33 @@ export default function AuthedHome() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#050B17]/85 via-[#050B17]/25 to-transparent" />
 
-                  <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-3">
-                    <span className="inline-flex items-center gap-2 rounded-full bg-black/30 border border-white/15 px-3 py-1 text-[11px] text-white/85 backdrop-blur-md">
-                      <span className="opacity-80">📍</span>
-                      <span className="truncate max-w-[26ch]">{a.location || "Unknown"}</span>
-                    </span>
-                    <span className="inline-flex items-center gap-2 rounded-full bg-black/30 border border-white/15 px-3 py-1 text-[11px] text-white/85 backdrop-blur-md">
-                      <span className="opacity-80">🖼</span>
-                      <span>{a.photoCount ?? "—"}</span>
-                    </span>
+                  <div className="absolute top-4 left-4 right-4 flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 border border-white/15 px-2.5 py-1 text-[10px] text-white/85 backdrop-blur-md">
+                        <span className="opacity-80 text-xs">📍</span>
+                        <span className="truncate max-w-[26ch]">{a.location || "Unknown"}</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 border border-white/15 px-2.5 py-1 text-[10px] text-white/85 backdrop-blur-md">
+                        <span className="opacity-80 text-xs">🖼</span>
+                        <span>{a.photoCount ?? "—"}</span>
+                      </span>
+                    </div>
+                    
+                    {/* Badge Count - Compact */}
+                    {a.badges && a.badges.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          // TODO: Open badge modal/detail view
+                        }}
+                        className="relative inline-flex items-center gap-1.5 rounded-full bg-black/30 border border-white/15 px-2.5 py-1 text-[10px] text-white/85 backdrop-blur-md hover:bg-black/40 hover:border-white/25 transition-all duration-200"
+                      >
+                        <span className="text-xs opacity-90">🏆</span>
+                        <span className="font-semibold">{a.badges.length}</span>
+                      </button>
+                    )}
                   </div>
 
                   <div className="absolute left-5 right-5 bottom-5">
@@ -321,12 +404,12 @@ export default function AuthedHome() {
                 </div>
 
                 <div className="px-6 pt-5 pb-6">
-                  <p className="text-sm text-gray-600 leading-relaxed overflow-hidden max-h-[3.25rem]">
+                  <p className="text-sm text-[var(--theme-text-secondary)] leading-relaxed overflow-hidden max-h-[3.25rem]">
                     {clampText(a.description || a.storyPreview, 120)}
                   </p>
                   <div className="mt-5 flex items-center justify-between">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-10 w-10 rounded-full bg-gray-100 overflow-hidden ring-2 ring-black/5">
+                      <div className="h-10 w-10 rounded-full bg-[var(--theme-surface-elevated)] overflow-hidden ring-2 ring-[var(--theme-border)]">
                         {a.user?.profilePicture ? (
                           <img
                             src={resolveMediaUrl(a.user.profilePicture) || a.user.profilePicture}
@@ -335,19 +418,19 @@ export default function AuthedHome() {
                             draggable={false}
                           />
                         ) : (
-                          <div className="h-full w-full grid place-items-center text-xs text-gray-400">
+                          <div className="h-full w-full grid place-items-center text-xs text-[var(--theme-text-tertiary)]">
                             ✦
                           </div>
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">
+                        <p className="text-sm font-semibold text-[var(--theme-text-primary)] truncate">
                           {a.user?.name?.trim() || "Anonymous"}
                         </p>
-                        <p className="text-xs text-gray-500 truncate">Open chapter</p>
+                        <p className="text-xs text-[var(--theme-text-tertiary)] truncate">Open chapter</p>
                       </div>
                     </div>
-                    <span className="text-xs font-semibold text-gray-900 group-hover:text-indigo-700 transition">
+                    <span className="text-xs font-semibold text-[var(--theme-text-primary)] group-hover:text-[var(--theme-accent)] transition">
                       Open →
                     </span>
                   </div>

@@ -60,6 +60,14 @@ export type PublicFeedUser = {
   profilePicture?: string;
 };
 
+export type PublicFeedBadge = {
+  id: string;
+  name?: string;
+  description?: string;
+  logoKey?: string;
+  isCustom?: boolean;
+};
+
 export type PublicFeedAlbumItem = {
   id: string;
   title?: string;
@@ -71,6 +79,7 @@ export type PublicFeedAlbumItem = {
   coverImage?: string;
   photoCount?: number;
   user?: PublicFeedUser;
+  badges?: PublicFeedBadge[];
 };
 
 export type PublicFeedPageInfo = {
@@ -298,6 +307,107 @@ export async function getPresignedUrl(payload: {
   }
 
   return data as { uploadUrl: string; key: string };
+}
+
+/**
+ * Get multiple presigned URLs for bulk uploads
+ * Backend: POST /api/media/presigned-urls
+ */
+export async function getPresignedUrls(payload: {
+  albumId: string;
+  files: Array<{ contentType: string }>;
+  expiresInSeconds?: number;
+}): Promise<Array<{ uploadUrl: string; key: string }>> {
+  const res = await apiFetch<unknown>("/media/presigned-urls", {
+    method: "POST",
+    body: JSON.stringify({
+      albumId: payload.albumId,
+      files: payload.files,
+      expiresInSeconds: payload.expiresInSeconds || 300,
+    }),
+  });
+
+  const data = unwrapData(res);
+
+  // Log for debugging in development only
+  if (process.env.NODE_ENV === "development") {
+    console.log("Presigned URLs response:", data);
+  }
+
+  // Handle different response formats:
+  // 1. { data: { presignedUrls: [...] } } - already unwrapped by unwrapData
+  // 2. { presignedUrls: [...] }
+  // 3. { urls: [...] }
+  // 4. { items: [...] }
+  // 5. { data: [...] } - array directly in data
+  // 6. [...] - direct array
+
+  let presignedUrlsArray: unknown[] | null = null;
+
+  if (isRecord(data)) {
+    // Try common property names - "uploads" is the actual property name from the API
+    presignedUrlsArray =
+      (Array.isArray(data.uploads) && data.uploads) ||
+      (Array.isArray(data.presignedUrls) && data.presignedUrls) ||
+      (Array.isArray(data.urls) && data.urls) ||
+      (Array.isArray(data.items) && data.items) ||
+      (Array.isArray(data.data) && data.data) ||
+      null;
+  } else if (Array.isArray(data)) {
+    presignedUrlsArray = data;
+  }
+
+  if (!presignedUrlsArray || !Array.isArray(presignedUrlsArray)) {
+    const errorDetails = isRecord(data)
+      ? `Object with keys: ${Object.keys(data).join(", ")}`
+      : `Type: ${typeof data}`;
+    console.error("Invalid response format. Expected array of presigned URLs.", {
+      received: data,
+      type: typeof data,
+      isRecord: isRecord(data),
+      keys: isRecord(data) ? Object.keys(data) : null,
+    });
+    throw new Error(
+      `Invalid response format from presigned-urls endpoint. ${errorDetails}. Please check the API response structure.`
+    );
+  }
+
+  // Map each item to { uploadUrl, key } format
+  const result = presignedUrlsArray
+    .map((item: unknown, index: number) => {
+      if (isRecord(item)) {
+        const uploadUrl =
+          (typeof item.uploadUrl === "string" && item.uploadUrl) ||
+          (typeof item.url === "string" && item.url) ||
+          (typeof item.presignedUrl === "string" && item.presignedUrl) ||
+          "";
+        const key =
+          (typeof item.key === "string" && item.key) ||
+          (typeof item.fileKey === "string" && item.fileKey) ||
+          "";
+
+        if (uploadUrl && key) {
+          return { uploadUrl, key };
+        }
+
+        console.warn(`Item ${index} missing uploadUrl or key:`, item);
+      } else {
+        console.warn(`Item ${index} is not a record:`, item);
+      }
+      return null;
+    })
+    .filter((item): item is { uploadUrl: string; key: string } => item !== null);
+
+  if (result.length !== payload.files.length) {
+    console.error(
+      `Mismatch: expected ${payload.files.length} presigned URLs, got ${result.length}`
+    );
+    throw new Error(
+      `Expected ${payload.files.length} presigned URLs, but received ${result.length}`
+    );
+  }
+
+  return result;
 }
 
 export async function uploadMedia(payload: {

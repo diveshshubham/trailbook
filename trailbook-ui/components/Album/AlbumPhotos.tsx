@@ -188,13 +188,13 @@ export default function AlbumPhotos({
             imgClass="h-auto object-contain bg-gray-100"
             forceControlsVisible
             onOpen={() => open(i, false)}
-            onInfo={() => open(i, false, true)}
+            onInfo={onSaveMediaMeta && !protectImages ? () => open(i, false, true) : undefined}
             hasMeta={Boolean(
               lightboxItems[i]?.meta?.title ||
                 lightboxItems[i]?.meta?.location ||
                 lightboxItems[i]?.meta?.tags?.length
             )}
-            onSetCover={onSetCover && mediaItems?.[i] ? () => onSetCover(mediaItems[i]) : undefined}
+            onSetCover={onSetCover && mediaItems?.[i] && !protectImages ? () => onSetCover(mediaItems[i]) : undefined}
             reflectionCount={getReflectionCountForIndex(i)}
             protectImage={protectImages}
             onMeasured={(isLandscape) =>
@@ -229,13 +229,13 @@ export default function AlbumPhotos({
                 frameClass={`${span} ${aspect}`}
                 protectImage={protectImages}
                 onOpen={() => open(i, false)}
-                onInfo={() => open(i, false, true)}
+                onInfo={onSaveMediaMeta && !protectImages ? () => open(i, false, true) : undefined}
                 hasMeta={Boolean(
                   lightboxItems[i]?.meta?.title ||
                     lightboxItems[i]?.meta?.location ||
                     lightboxItems[i]?.meta?.tags?.length
                 )}
-                onSetCover={onSetCover && mediaItems?.[i] ? () => onSetCover(mediaItems[i]) : undefined}
+                onSetCover={onSetCover && mediaItems?.[i] && !protectImages ? () => onSetCover(mediaItems[i]) : undefined}
                 reflectionCount={getReflectionCountForIndex(i)}
                 onMeasured={(isL) =>
                   setLandscapeBySrc((prev) => (prev[src] === isL ? prev : { ...prev, [src]: isL }))
@@ -269,13 +269,13 @@ export default function AlbumPhotos({
                   }
                   protectImage={protectImages}
                   onOpen={() => open(0, false)}
-                  onInfo={() => open(0, false, true)}
+                  onInfo={onSaveMediaMeta && !protectImages ? () => open(0, false, true) : undefined}
                   hasMeta={Boolean(
                     lightboxItems[0]?.meta?.title ||
                       lightboxItems[0]?.meta?.location ||
                       lightboxItems[0]?.meta?.tags?.length
                   )}
-                  onSetCover={onSetCover && mediaItems?.[0] ? () => onSetCover(mediaItems[0]) : undefined}
+                  onSetCover={onSetCover && mediaItems?.[0] && !protectImages ? () => onSetCover(mediaItems[0]) : undefined}
                   reflectionCount={getReflectionCountForIndex(0)}
                   onMeasured={(isL) =>
                     setLandscapeBySrc((prev) =>
@@ -301,14 +301,14 @@ export default function AlbumPhotos({
                   frameClass="aspect-[16/9]"
                   protectImage={protectImages}
                   onOpen={() => open(row.idx, false)}
-                  onInfo={() => open(row.idx, false, true)}
+                  onInfo={onSaveMediaMeta && !protectImages ? () => open(row.idx, false, true) : undefined}
                   hasMeta={Boolean(
                     lightboxItems[row.idx]?.meta?.title ||
                       lightboxItems[row.idx]?.meta?.location ||
                       lightboxItems[row.idx]?.meta?.tags?.length
                   )}
                   onSetCover={
-                    onSetCover && mediaItems?.[row.idx] ? () => onSetCover(mediaItems[row.idx]) : undefined
+                    onSetCover && mediaItems?.[row.idx] && !protectImages ? () => onSetCover(mediaItems[row.idx]) : undefined
                   }
                   reflectionCount={getReflectionCountForIndex(row.idx)}
                   onMeasured={(isL) =>
@@ -328,14 +328,14 @@ export default function AlbumPhotos({
                   frameClass="aspect-[3/4] max-w-[560px] mx-auto"
                   protectImage={protectImages}
                   onOpen={() => open(row.idx, false)}
-                  onInfo={() => open(row.idx, false, true)}
+                  onInfo={onSaveMediaMeta && !protectImages ? () => open(row.idx, false, true) : undefined}
                   hasMeta={Boolean(
                     lightboxItems[row.idx]?.meta?.title ||
                       lightboxItems[row.idx]?.meta?.location ||
                       lightboxItems[row.idx]?.meta?.tags?.length
                   )}
                   onSetCover={
-                    onSetCover && mediaItems?.[row.idx] ? () => onSetCover(mediaItems[row.idx]) : undefined
+                    onSetCover && mediaItems?.[row.idx] && !protectImages ? () => onSetCover(mediaItems[row.idx]) : undefined
                   }
                   reflectionCount={getReflectionCountForIndex(row.idx)}
                   onMeasured={(isL) =>
@@ -356,14 +356,14 @@ export default function AlbumPhotos({
                     frameClass="aspect-[16/10]"
                     protectImage={protectImages}
                     onOpen={() => open(row.left, false)}
-                    onInfo={() => open(row.left, false, true)}
+                    onInfo={onSaveMediaMeta && !protectImages ? () => open(row.left, false, true) : undefined}
                     hasMeta={Boolean(
                       lightboxItems[row.left]?.meta?.title ||
                         lightboxItems[row.left]?.meta?.location ||
                         lightboxItems[row.left]?.meta?.tags?.length
                     )}
                     onSetCover={
-                      onSetCover && mediaItems?.[row.left] ? () => onSetCover(mediaItems[row.left]) : undefined
+                      onSetCover && mediaItems?.[row.left] && !protectImages ? () => onSetCover(mediaItems[row.left]) : undefined
                     }
                     reflectionCount={getReflectionCountForIndex(row.left)}
                     onMeasured={(isL) =>
@@ -378,14 +378,14 @@ export default function AlbumPhotos({
                     frameClass="aspect-[16/10]"
                     protectImage={protectImages}
                     onOpen={() => open(row.right, false)}
-                    onInfo={() => open(row.right, false, true)}
+                    onInfo={onSaveMediaMeta && !protectImages ? () => open(row.right, false, true) : undefined}
                     hasMeta={Boolean(
                       lightboxItems[row.right]?.meta?.title ||
                         lightboxItems[row.right]?.meta?.location ||
                         lightboxItems[row.right]?.meta?.tags?.length
                     )}
                     onSetCover={
-                      onSetCover && mediaItems?.[row.right] ? () => onSetCover(mediaItems[row.right]) : undefined
+                      onSetCover && mediaItems?.[row.right] && !protectImages ? () => onSetCover(mediaItems[row.right]) : undefined
                     }
                     reflectionCount={getReflectionCountForIndex(row.right)}
                     onMeasured={(isL) =>
@@ -455,7 +455,7 @@ export default function AlbumPhotos({
 
       {displayPhotos.length === 0 && !showUpload && (
         <div className="py-20 text-center">
-          <p className="text-gray-400 font-light italic">No memories captured here yet.</p>
+          <p className="text-[var(--theme-text-tertiary)] font-light italic">No memories captured here yet.</p>
         </div>
       )}
 
@@ -491,29 +491,30 @@ export default function AlbumPhotos({
       {/* Public preview paywall (shown only when locked) */}
       {isPreview && (
         <div className="mt-12">
-          <div className="rounded-[32px] border border-black/5 bg-white shadow-sm overflow-hidden">
+          <div className="rounded-[32px] border border-[var(--theme-border)] bg-[var(--theme-surface)] shadow-theme overflow-hidden">
             <div className="p-8 sm:p-10">
-              <p className="text-[10px] uppercase tracking-[0.45em] text-gray-400 font-semibold">
+              <p className="text-[10px] uppercase tracking-[0.45em] text-[var(--theme-text-tertiary)] font-semibold">
                 Public preview
               </p>
-              <h3 className="mt-3 text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
+              <h3 className="mt-3 text-2xl sm:text-3xl font-bold tracking-tight text-[var(--theme-text-primary)]">
                 Unlock the remaining {allSources.length - (previewLimit || 0)} photos
               </h3>
-              <p className="mt-3 text-gray-600 leading-relaxed max-w-2xl">
-                You’ve already viewed this chapter once on this device. Sign up to revisit, save, and
+              <p className="mt-3 text-[var(--theme-text-secondary)] leading-relaxed max-w-2xl">
+                You've already viewed this chapter once on this device. Sign up to revisit, save, and
                 explore the full gallery anytime.
               </p>
               <div className="mt-7 flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={() => window.dispatchEvent(new Event("tb:open-auth"))}
-                  className="rounded-full px-6 py-3 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-semibold shadow-lg shadow-orange-500/20 hover:opacity-95 transition"
+                  className="rounded-full px-6 py-3 bg-[var(--theme-gradient-primary)] text-[var(--theme-text-inverse)] font-semibold shadow-theme-lg hover:opacity-95 transition"
+                  style={{ background: "var(--theme-gradient-primary)" }}
                 >
                   Login / Sign up
                 </button>
                 <Link
                   href="/"
-                  className="rounded-full px-6 py-3 bg-white border border-black/10 text-gray-900 font-semibold hover:bg-gray-50 transition text-center"
+                  className="rounded-full px-6 py-3 bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-text-primary)] font-semibold hover:bg-[var(--theme-surface-hover)] transition text-center"
                 >
                   Back to home
                 </Link>
@@ -544,7 +545,7 @@ function PhotoCard({
   src: string;
   index: number;
   onOpen: () => void;
-  onInfo: () => void;
+  onInfo?: () => void;
   hasMeta: boolean;
   onSetCover?: () => void;
   reflectionCount?: number;
@@ -566,7 +567,7 @@ function PhotoCard({
           onOpen();
         }
       }}
-      className={`group relative ${frameClass || "aspect-[4/5]"} w-full overflow-hidden rounded-3xl bg-gray-100 shadow-sm transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 text-left cursor-pointer`}
+      className={`group relative ${frameClass || "aspect-[4/5]"} w-full overflow-hidden rounded-3xl bg-[var(--theme-surface-elevated)] shadow-theme transition-all duration-500 hover:shadow-theme-xl hover:-translate-y-2 text-left cursor-pointer`}
     >
       {blurBackground && (
         <>
@@ -612,8 +613,8 @@ function PhotoCard({
         </div>
       )}
 
-      {/* Only show “Add details” control when metadata is missing */}
-      {!hasMeta && (
+      {/* Only show "Add details" control when metadata is missing AND user can edit */}
+      {!hasMeta && onInfo && !protectImage && (
         <div className="absolute top-4 right-4 z-10">
           <button
             type="button"
@@ -623,7 +624,7 @@ function PhotoCard({
             }}
             className={[
               "tb-add-info group/icon relative h-10 w-10 grid place-items-center rounded-full",
-              "bg-white/0 hover:bg-white/10 border border-white/0 hover:border-white/10 backdrop-blur-md text-white/90 transition",
+              "bg-[var(--theme-backdrop)]/0 hover:bg-[var(--theme-backdrop)]/20 border border-[var(--theme-border)]/0 hover:border-[var(--theme-border)]/30 backdrop-blur-md text-[var(--theme-text-inverse)]/90 transition",
               forceControlsVisible ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100",
             ].join(" ")}
             title="Add info"
@@ -658,7 +659,7 @@ function PhotoCard({
             }}
             className={[
               "h-10 w-10 grid place-items-center rounded-full",
-              "bg-white/0 hover:bg-white/10 border border-white/0 hover:border-white/10 backdrop-blur-md text-white/90 transition",
+              "bg-[var(--theme-backdrop)]/0 hover:bg-[var(--theme-backdrop)]/20 border border-[var(--theme-border)]/0 hover:border-[var(--theme-border)]/30 backdrop-blur-md text-[var(--theme-text-inverse)]/90 transition",
               forceControlsVisible ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100",
             ].join(" ")}
             title="Set as cover"

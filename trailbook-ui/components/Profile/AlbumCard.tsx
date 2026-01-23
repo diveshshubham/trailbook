@@ -1,3 +1,7 @@
+"use client";
+
+import Link from "next/link";
+
 type AlbumCardAlbum = {
   id?: string;
   cover: string;
@@ -19,8 +23,6 @@ function formatDateLabel(dateLike?: string) {
   return d.toLocaleString(undefined, { month: "long", year: "numeric" });
 }
 
-import Link from "next/link";
-
 export default function AlbumCard({ album }: { album: AlbumCardAlbum }) {
   if (!album) return null; // 🛡️ safety guard
 
@@ -30,7 +32,7 @@ export default function AlbumCard({ album }: { album: AlbumCardAlbum }) {
 
   return (
     <Link href={href} className="group block">
-      <div className="relative overflow-hidden rounded-3xl bg-white shadow-sm border border-black/5 transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/10">
+      <div className="relative overflow-hidden rounded-3xl bg-[var(--theme-surface)] shadow-theme border border-[var(--theme-border)] transition-all duration-500 hover:-translate-y-1 hover:shadow-theme-xl">
         <div className="relative aspect-[16/10] overflow-hidden">
           <img
             src={album.cover}
@@ -69,7 +71,7 @@ export default function AlbumCard({ album }: { album: AlbumCardAlbum }) {
         </div>
 
         <div className="px-5 py-4">
-          <p className="text-[11px] uppercase tracking-[0.3em] text-gray-400">
+          <p className="text-[11px] uppercase tracking-[0.3em] text-[var(--theme-text-tertiary)]">
             {dateLabel || "—"}
           </p>
         </div>

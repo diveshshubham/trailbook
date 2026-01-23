@@ -315,14 +315,15 @@ export async function listMediaReflections(payload: {
   mediaId: string;
   limit?: number;
   cursor?: string | null;
-}): Promise<{ items: MediaReflectionItem[]; pageInfo?: CursorPageInfo }> {
+}): Promise<{ items: MediaReflectionItem[]; count?: number; pageInfo?: CursorPageInfo }> {
   const qs = new URLSearchParams();
   if (payload.limit) qs.set("limit", String(payload.limit));
   if (payload.cursor) qs.set("cursor", String(payload.cursor));
   const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  // Use auth: true so user's reflection appears first when authenticated
   const res = await apiFetch<unknown>(`/media/${encodeURIComponent(payload.mediaId)}/reflections${suffix}`, {
     baseUrl: getBadgesBaseUrl(),
-    auth: false,
+    auth: true, // Changed to true so authenticated users see their reflection first
     method: "GET",
     headers: { Accept: "application/json" },
   });
@@ -336,6 +337,9 @@ export async function listMediaReflections(payload: {
       : Array.isArray(data)
         ? data
         : [];
+
+  // Extract count from response (API returns count in data object)
+  const count = isRecord(data) && typeof data["count"] === "number" ? (data["count"] as number) : undefined;
 
   const pageInfoRaw = isRecord(data) ? data["pageInfo"] : undefined;
   const pageInfoRec = isRecord(pageInfoRaw) ? pageInfoRaw : undefined;
@@ -389,7 +393,7 @@ export async function listMediaReflections(payload: {
       }
     : undefined;
 
-  return { items, pageInfo };
+  return { items, count, pageInfo };
 }
 
 // ----------------------------
@@ -407,6 +411,11 @@ export type AlbumBadgeAssignment = {
     isCustom?: boolean;
   };
   assignee: {
+    id: string;
+    name: string;
+    profilePicture?: string;
+  };
+  assignedBy?: {
     id: string;
     name: string;
     profilePicture?: string;
@@ -461,6 +470,7 @@ function normalizeAlbumBadgeAssignment(raw: unknown): AlbumBadgeAssignment {
 
   const badgeRaw = isRecord(raw.badge) ? (raw.badge as Record<string, unknown>) : {};
   const assigneeRaw = isRecord(raw.assignee) ? (raw.assignee as Record<string, unknown>) : {};
+  const assignedByRaw = isRecord(raw.assignedBy) ? (raw.assignedBy as Record<string, unknown>) : null;
 
   return {
     id: (typeof raw.id === "string" && raw.id) || (typeof raw._id === "string" && raw._id) || "",
@@ -485,6 +495,18 @@ function normalizeAlbumBadgeAssignment(raw: unknown): AlbumBadgeAssignment {
       name: (typeof assigneeRaw.name === "string" && assigneeRaw.name) || "",
       profilePicture: typeof assigneeRaw.profilePicture === "string" ? (assigneeRaw.profilePicture as string) : undefined,
     },
+    assignedBy: assignedByRaw
+      ? {
+          id:
+            (typeof assignedByRaw.id === "string" && assignedByRaw.id) ||
+            (typeof assignedByRaw.userId === "string" && assignedByRaw.userId) ||
+            (typeof raw["assignedByUserId"] === "string" && (raw["assignedByUserId"] as string)) ||
+            "",
+          name: (typeof assignedByRaw.name === "string" && assignedByRaw.name) || "",
+          profilePicture:
+            typeof assignedByRaw.profilePicture === "string" ? (assignedByRaw.profilePicture as string) : undefined,
+        }
+      : undefined,
     assignedByUserId: typeof raw.assignedByUserId === "string" ? raw.assignedByUserId : undefined,
   };
 }

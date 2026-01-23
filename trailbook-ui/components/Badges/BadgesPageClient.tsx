@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import { useTheme } from "@/contexts/ThemeContext";
 
 import { ApiError } from "@/lib/api";
 import {
@@ -38,6 +39,8 @@ type PreviewBadge =
   | { kind: "custom"; badge: CustomBadge };
 
 export default function BadgesPageClient() {
+  const { themeKey } = useTheme();
+  const isDefault = themeKey === "default";
   const [customBadges, setCustomBadges] = useState<CustomBadge[]>([]);
   const [earnedGlobalBadges, setEarnedGlobalBadges] = useState<GlobalBadge[]>([]);
   const [globalCatalog, setGlobalCatalog] = useState<GlobalBadge[]>([]);
@@ -194,11 +197,15 @@ export default function BadgesPageClient() {
   };
 
   return (
-    <main className="max-w-6xl mx-auto px-6 py-10">
+    <main 
+      className="max-w-6xl mx-auto px-6 py-10 transition-colors duration-300"
+      style={{ backgroundColor: "var(--theme-background)", color: "var(--theme-text-primary)" }}
+    >
       {/* Big hover/click preview */}
       {preview && (
         <div
-          className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] backdrop-blur-sm transition-colors duration-300"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
           onClick={() => setPreview(null)}
           role="dialog"
           aria-modal="true"
@@ -207,25 +214,56 @@ export default function BadgesPageClient() {
             className="absolute left-1/2 top-1/2 w-[min(920px,92vw)] -translate-x-1/2 -translate-y-1/2"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="rounded-[32px] overflow-hidden border border-white/15 bg-gradient-to-br from-gray-950 via-gray-900 to-black shadow-2xl shadow-black/30">
+            <div 
+              className="rounded-[32px] overflow-hidden border shadow-2xl transition-colors duration-300"
+              style={{
+                borderColor: "var(--theme-border)",
+                backgroundColor: isDefault ? "rgb(17, 24, 39)" : "var(--theme-surface)",
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.3)",
+              }}
+            >
               <div className="relative p-8 sm:p-10">
-                <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-orange-500/20 blur-3xl" />
-                <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-pink-500/20 blur-3xl" />
+                {isDefault ? (
+                  <>
+                    <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-orange-500/20 blur-3xl" />
+                    <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-pink-500/20 blur-3xl" />
+                  </>
+                ) : (
+                  <>
+                    <div
+                      className="absolute -top-24 -right-24 w-96 h-96 rounded-full blur-3xl"
+                      style={{ backgroundColor: "var(--theme-accent)", opacity: 0.1 }}
+                    />
+                    <div
+                      className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full blur-3xl"
+                      style={{ backgroundColor: "var(--theme-info)", opacity: 0.1 }}
+                    />
+                  </>
+                )}
 
                 <div className="relative flex items-start justify-between gap-6">
                   <div className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">
+                    <p 
+                      className="text-[10px] uppercase tracking-[0.3em] font-semibold"
+                      style={{ color: isDefault ? "rgba(255, 255, 255, 0.6)" : "var(--theme-text-tertiary)" }}
+                    >
                       {preview.kind === "custom"
                         ? "Custom badge"
                         : preview.kind === "global_earned"
                           ? "Earned global badge"
                           : "Global badge"}
                     </p>
-                    <h3 className="mt-2 text-2xl sm:text-3xl font-semibold tracking-tight text-white">
+                    <h3 
+                      className="mt-2 text-2xl sm:text-3xl font-semibold tracking-tight"
+                      style={{ color: isDefault ? "white" : "var(--theme-text-primary)" }}
+                    >
                       {preview.badge.name}
                     </h3>
                     {preview.badge.description ? (
-                      <p className="mt-3 text-sm sm:text-base text-white/80 leading-relaxed max-w-2xl">
+                      <p 
+                        className="mt-3 text-sm sm:text-base leading-relaxed max-w-2xl"
+                        style={{ color: isDefault ? "rgba(255, 255, 255, 0.8)" : "var(--theme-text-secondary)" }}
+                      >
                         {preview.badge.description}
                       </p>
                     ) : null}
@@ -234,7 +272,19 @@ export default function BadgesPageClient() {
                   <button
                     type="button"
                     onClick={() => setPreview(null)}
-                    className="shrink-0 rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-white hover:bg-white/15"
+                    className="shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition"
+                    style={{
+                      backgroundColor: isDefault ? "rgba(255, 255, 255, 0.1)" : "var(--theme-surface-hover)",
+                      color: isDefault ? "white" : "var(--theme-text-secondary)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = isDefault ? "rgba(255, 255, 255, 0.15)" : "var(--theme-surface-elevated)";
+                      e.currentTarget.style.color = isDefault ? "white" : "var(--theme-text-primary)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = isDefault ? "rgba(255, 255, 255, 0.1)" : "var(--theme-surface-hover)";
+                      e.currentTarget.style.color = isDefault ? "white" : "var(--theme-text-secondary)";
+                    }}
                   >
                     Close
                   </button>
@@ -242,7 +292,13 @@ export default function BadgesPageClient() {
 
                 <div className="relative mt-8 grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
                   <div className="lg:col-span-3">
-                    <div className="relative w-full h-[360px] sm:h-[440px] lg:h-[520px] rounded-[28px] overflow-hidden border border-white/10 bg-white/5">
+                    <div 
+                      className="relative w-full h-[360px] sm:h-[440px] lg:h-[520px] rounded-[28px] overflow-hidden border transition-colors duration-300"
+                      style={{
+                        borderColor: isDefault ? "rgba(255, 255, 255, 0.1)" : "var(--theme-border)",
+                        backgroundColor: isDefault ? "rgba(255, 255, 255, 0.05)" : "var(--theme-surface-elevated)",
+                      }}
+                    >
                       {resolveMediaUrl(preview.badge.logoKey) ? (
                         <Image
                           src={resolveMediaUrl(preview.badge.logoKey)!}
@@ -252,13 +308,19 @@ export default function BadgesPageClient() {
                           sizes="(max-width: 640px) 92vw, (max-width: 1024px) 92vw, 520px"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white/70 text-5xl">
+                        <div 
+                          className="w-full h-full flex items-center justify-center text-5xl"
+                          style={{ color: isDefault ? "rgba(255, 255, 255, 0.7)" : "var(--theme-text-tertiary)" }}
+                        >
                           ✦
                         </div>
                       )}
                     </div>
                     {preview.badge.logoKey ? (
-                      <p className="mt-3 text-xs text-white/50 truncate">
+                      <p 
+                        className="mt-3 text-xs truncate"
+                        style={{ color: isDefault ? "rgba(255, 255, 255, 0.5)" : "var(--theme-text-tertiary)" }}
+                      >
                         key: {String(preview.badge.logoKey)}
                       </p>
                     ) : null}
@@ -266,33 +328,69 @@ export default function BadgesPageClient() {
 
                   <div className="lg:col-span-2">
                     {preview.kind !== "custom" ? (
-                      <div className="rounded-[28px] border border-white/10 bg-black/25 p-6">
-                        <p className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">
+                      <div 
+                        className="rounded-[28px] border p-6 transition-colors duration-300"
+                        style={{
+                          borderColor: isDefault ? "rgba(255, 255, 255, 0.1)" : "var(--theme-border)",
+                          backgroundColor: isDefault ? "rgba(0, 0, 0, 0.25)" : "var(--theme-surface)",
+                        }}
+                      >
+                        <p 
+                          className="text-[10px] uppercase tracking-[0.3em] font-semibold"
+                          style={{ color: isDefault ? "rgba(255, 255, 255, 0.6)" : "var(--theme-text-tertiary)" }}
+                        >
                           How to earn
                         </p>
-                        <p className="mt-3 text-sm text-white/80 leading-relaxed">
+                        <p 
+                          className="mt-3 text-sm leading-relaxed"
+                          style={{ color: isDefault ? "rgba(255, 255, 255, 0.8)" : "var(--theme-text-secondary)" }}
+                        >
                           {(typeof preview.badge.howToEarn === "string" &&
                             preview.badge.howToEarn.trim()) ||
                             "Earned automatically based on milestone rules (album uploads, reach, and more)."}
                         </p>
                       </div>
                     ) : (
-                      <div className="rounded-[28px] border border-white/10 bg-black/25 p-6">
-                        <p className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">
+                      <div 
+                        className="rounded-[28px] border p-6 transition-colors duration-300"
+                        style={{
+                          borderColor: isDefault ? "rgba(255, 255, 255, 0.1)" : "var(--theme-border)",
+                          backgroundColor: isDefault ? "rgba(0, 0, 0, 0.25)" : "var(--theme-surface)",
+                        }}
+                      >
+                        <p 
+                          className="text-[10px] uppercase tracking-[0.3em] font-semibold"
+                          style={{ color: isDefault ? "rgba(255, 255, 255, 0.6)" : "var(--theme-text-tertiary)" }}
+                        >
                           About
                         </p>
-                        <p className="mt-3 text-sm text-white/80 leading-relaxed">
+                        <p 
+                          className="mt-3 text-sm leading-relaxed"
+                          style={{ color: isDefault ? "rgba(255, 255, 255, 0.8)" : "var(--theme-text-secondary)" }}
+                        >
                           This is a custom badge you created. You can assign it to
                           anyone (assignment UI coming next).
                         </p>
                       </div>
                     )}
 
-                    <div className="mt-5 rounded-[28px] border border-white/10 bg-white/5 p-6">
-                      <p className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">
+                    <div 
+                      className="mt-5 rounded-[28px] border p-6 transition-colors duration-300"
+                      style={{
+                        borderColor: isDefault ? "rgba(255, 255, 255, 0.1)" : "var(--theme-border)",
+                        backgroundColor: isDefault ? "rgba(255, 255, 255, 0.05)" : "var(--theme-surface-elevated)",
+                      }}
+                    >
+                      <p 
+                        className="text-[10px] uppercase tracking-[0.3em] font-semibold"
+                        style={{ color: isDefault ? "rgba(255, 255, 255, 0.6)" : "var(--theme-text-tertiary)" }}
+                      >
                         Tip
                       </p>
-                      <p className="mt-3 text-sm text-white/80 leading-relaxed">
+                      <p 
+                        className="mt-3 text-sm leading-relaxed"
+                        style={{ color: isDefault ? "rgba(255, 255, 255, 0.8)" : "var(--theme-text-secondary)" }}
+                      >
                         Press <span className="font-semibold">Esc</span> to close.
                       </p>
                     </div>
@@ -306,41 +404,95 @@ export default function BadgesPageClient() {
 
       <div className="flex items-start justify-between gap-6">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-gray-500 font-semibold">
+          <p 
+            className="text-[10px] uppercase tracking-[0.3em] font-semibold"
+            style={{ color: "var(--theme-text-tertiary)" }}
+          >
             Badges
           </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-900">
+          <h1 
+            className="mt-2 text-3xl font-bold tracking-tight"
+            style={{ color: "var(--theme-text-primary)" }}
+          >
             Badges
           </h1>
-          <p className="mt-2 text-sm text-gray-600 max-w-2xl">
+          <p 
+            className="mt-2 text-sm max-w-2xl"
+            style={{ color: "var(--theme-text-secondary)" }}
+          >
             Create up to <span className="font-semibold">{MAX_CUSTOM_BADGES}</span>{" "}
             custom badges — and collect global badges by hitting milestones.
           </p>
         </div>
 
-        <div className="shrink-0 rounded-2xl border border-black/5 bg-white shadow-sm px-4 py-3">
-          <p className="text-xs text-gray-600">
+        <div 
+          className="shrink-0 rounded-2xl border shadow-sm px-4 py-3 transition-colors duration-300"
+          style={{
+            borderColor: "var(--theme-border)",
+            backgroundColor: "var(--theme-surface)",
+          }}
+        >
+          <p 
+            className="text-xs"
+            style={{ color: "var(--theme-text-secondary)" }}
+          >
             Remaining:{" "}
-            <span className="font-semibold text-gray-900">{remaining}</span>
+            <span 
+              className="font-semibold"
+              style={{ color: "var(--theme-text-primary)" }}
+            >
+              {remaining}
+            </span>
           </p>
         </div>
       </div>
 
       {/* Global badges */}
-      <section className="mt-8 rounded-[32px] border border-black/5 bg-gradient-to-br from-gray-900 via-gray-950 to-black text-white shadow-xl shadow-black/10 overflow-hidden">
+      <section 
+        className="mt-8 rounded-[32px] border text-white shadow-xl overflow-hidden transition-colors duration-300"
+        style={{
+          borderColor: "var(--theme-border)",
+          backgroundColor: isDefault ? "rgb(17, 24, 39)" : "var(--theme-surface)",
+          boxShadow: "0 20px 25px -5px var(--theme-shadow-strong), 0 10px 10px -5px var(--theme-shadow)",
+        }}
+      >
         <div className="relative p-8">
-          <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-orange-500/20 blur-3xl" />
-          <div className="absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-pink-500/20 blur-3xl" />
+          {isDefault ? (
+            <>
+              <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-orange-500/20 blur-3xl" />
+              <div className="absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-pink-500/20 blur-3xl" />
+            </>
+          ) : (
+            <>
+              <div
+                className="absolute -top-24 -right-24 w-80 h-80 rounded-full blur-3xl"
+                style={{ backgroundColor: "var(--theme-accent)", opacity: 0.1 }}
+              />
+              <div
+                className="absolute -bottom-24 -left-24 w-80 h-80 rounded-full blur-3xl"
+                style={{ backgroundColor: "var(--theme-info)", opacity: 0.1 }}
+              />
+            </>
+          )}
 
           <div className="relative flex items-start justify-between gap-6">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">
+              <p 
+                className="text-[10px] uppercase tracking-[0.3em] font-semibold"
+                style={{ color: isDefault ? "rgba(255, 255, 255, 0.6)" : "var(--theme-text-tertiary)" }}
+              >
                 Global badges
               </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight">
+              <h2 
+                className="mt-2 text-2xl font-semibold tracking-tight"
+                style={{ color: isDefault ? "white" : "var(--theme-text-primary)" }}
+              >
                 Earned automatically
               </h2>
-              <p className="mt-2 text-sm text-white/70 max-w-2xl">
+              <p 
+                className="mt-2 text-sm max-w-2xl"
+                style={{ color: isDefault ? "rgba(255, 255, 255, 0.7)" : "var(--theme-text-secondary)" }}
+              >
                 Global badges are created by admins and awarded based on milestones
                 (album uploads, reach, and more).
               </p>
@@ -350,23 +502,70 @@ export default function BadgesPageClient() {
               type="button"
               onClick={refreshGlobal}
               disabled={loadingGlobal}
-              className="shrink-0 rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-white hover:bg-white/15 disabled:opacity-60"
+              className="shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition disabled:opacity-60"
+              style={{
+                backgroundColor: isDefault ? "rgba(255, 255, 255, 0.1)" : "var(--theme-surface-hover)",
+                color: isDefault ? "white" : "var(--theme-text-secondary)",
+              }}
+              onMouseEnter={(e) => {
+                if (!loadingGlobal) {
+                  e.currentTarget.style.backgroundColor = isDefault ? "rgba(255, 255, 255, 0.15)" : "var(--theme-surface-elevated)";
+                  e.currentTarget.style.color = isDefault ? "white" : "var(--theme-text-primary)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!loadingGlobal) {
+                  e.currentTarget.style.backgroundColor = isDefault ? "rgba(255, 255, 255, 0.1)" : "var(--theme-surface-hover)";
+                  e.currentTarget.style.color = isDefault ? "white" : "var(--theme-text-secondary)";
+                }
+              }}
             >
               {loadingGlobal ? "Refreshing…" : "Refresh"}
             </button>
           </div>
 
           {loadingGlobal ? (
-            <div className="relative mt-6 rounded-3xl bg-white/5 border border-white/10 p-8 text-sm text-white/70">
+            <div 
+              className="relative mt-6 rounded-3xl border p-8 text-sm transition-colors duration-300"
+              style={{
+                borderColor: isDefault ? "rgba(255, 255, 255, 0.1)" : "var(--theme-border)",
+                backgroundColor: isDefault ? "rgba(255, 255, 255, 0.05)" : "var(--theme-surface-elevated)",
+                color: isDefault ? "rgba(255, 255, 255, 0.7)" : "var(--theme-text-secondary)",
+              }}
+            >
               Loading global badges…
             </div>
           ) : loadGlobalError ? (
-            <div className="relative mt-6 rounded-3xl bg-red-500/10 border border-red-400/20 p-8">
-              <p className="text-sm font-semibold text-red-100">Couldn’t load global badges</p>
-              <p className="mt-1 text-sm text-red-100/80">{loadGlobalError}</p>
+            <div 
+              className="relative mt-6 rounded-3xl border p-8 transition-colors duration-300"
+              style={{
+                borderColor: "var(--theme-error)",
+                backgroundColor: "var(--theme-error)",
+                opacity: 0.1,
+              }}
+            >
+              <p 
+                className="text-sm font-semibold"
+                style={{ color: "var(--theme-error)" }}
+              >
+                Couldn't load global badges
+              </p>
+              <p 
+                className="mt-1 text-sm"
+                style={{ color: "var(--theme-error)", opacity: 0.8 }}
+              >
+                {loadGlobalError}
+              </p>
             </div>
           ) : globalCatalog.length === 0 ? (
-            <div className="relative mt-6 rounded-3xl bg-white/5 border border-white/10 p-8 text-sm text-white/70">
+            <div 
+              className="relative mt-6 rounded-3xl border p-8 text-sm transition-colors duration-300"
+              style={{
+                borderColor: isDefault ? "rgba(255, 255, 255, 0.1)" : "var(--theme-border)",
+                backgroundColor: isDefault ? "rgba(255, 255, 255, 0.05)" : "var(--theme-surface-elevated)",
+                color: isDefault ? "rgba(255, 255, 255, 0.7)" : "var(--theme-text-secondary)",
+              }}
+            >
               No global badges published yet.
             </div>
           ) : (
@@ -379,7 +578,17 @@ export default function BadgesPageClient() {
                 return (
                   <div
                     key={b.id || `${b.name}-${b.logoKey || ""}`}
-                    className="group rounded-3xl bg-white/5 border border-white/10 p-5 hover:bg-white/8 transition"
+                    className="group rounded-3xl border p-5 transition"
+                    style={{
+                      borderColor: isDefault ? "rgba(255, 255, 255, 0.1)" : "var(--theme-border)",
+                      backgroundColor: isDefault ? "rgba(255, 255, 255, 0.05)" : "var(--theme-surface-elevated)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = isDefault ? "rgba(255, 255, 255, 0.08)" : "var(--theme-surface-hover)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = isDefault ? "rgba(255, 255, 255, 0.05)" : "var(--theme-surface-elevated)";
+                    }}
                   >
                     <div className="flex items-start gap-4">
                       <button
@@ -387,7 +596,11 @@ export default function BadgesPageClient() {
                         title="Preview badge"
                         onMouseEnter={() => setPreview({ kind: "global_catalog", badge: b })}
                         onClick={() => setPreview({ kind: "global_catalog", badge: b })}
-                        className="relative w-14 h-14 rounded-2xl bg-white/10 border border-white/15 overflow-hidden shrink-0 cursor-zoom-in"
+                        className="relative w-14 h-14 rounded-2xl border overflow-hidden shrink-0 cursor-zoom-in transition-colors duration-300"
+                        style={{
+                          borderColor: isDefault ? "rgba(255, 255, 255, 0.15)" : "var(--theme-border)",
+                          backgroundColor: isDefault ? "rgba(255, 255, 255, 0.1)" : "var(--theme-surface)",
+                        }}
                       >
                         {logo ? (
                           <Image
@@ -397,26 +610,49 @@ export default function BadgesPageClient() {
                             className="object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-white/70 text-sm">
+                          <div 
+                            className="w-full h-full flex items-center justify-center text-sm"
+                            style={{ color: isDefault ? "rgba(255, 255, 255, 0.7)" : "var(--theme-text-tertiary)" }}
+                          >
                             ✦
                           </div>
                         )}
                       </button>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{b.name}</p>
+                        <p 
+                          className="text-sm font-semibold truncate"
+                          style={{ color: isDefault ? "white" : "var(--theme-text-primary)" }}
+                        >
+                          {b.name}
+                        </p>
                         {b.description ? (
-                          <p className="mt-1 text-xs text-white/70 line-clamp-2">
+                          <p 
+                            className="mt-1 text-xs line-clamp-2"
+                            style={{ color: isDefault ? "rgba(255, 255, 255, 0.7)" : "var(--theme-text-secondary)" }}
+                          >
                             {b.description}
                           </p>
                         ) : null}
                       </div>
                     </div>
 
-                    <div className="mt-4 rounded-2xl bg-black/20 border border-white/10 px-4 py-3">
-                      <p className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">
+                    <div 
+                      className="mt-4 rounded-2xl border px-4 py-3 transition-colors duration-300"
+                      style={{
+                        borderColor: isDefault ? "rgba(255, 255, 255, 0.1)" : "var(--theme-border)",
+                        backgroundColor: isDefault ? "rgba(0, 0, 0, 0.2)" : "var(--theme-surface)",
+                      }}
+                    >
+                      <p 
+                        className="text-[10px] uppercase tracking-[0.3em] font-semibold"
+                        style={{ color: isDefault ? "rgba(255, 255, 255, 0.6)" : "var(--theme-text-tertiary)" }}
+                      >
                         How to earn
                       </p>
-                      <p className="mt-2 text-xs text-white/80 leading-relaxed">
+                      <p 
+                        className="mt-2 text-xs leading-relaxed"
+                        style={{ color: isDefault ? "rgba(255, 255, 255, 0.8)" : "var(--theme-text-secondary)" }}
+                      >
                         {how}
                       </p>
                     </div>
@@ -430,16 +666,43 @@ export default function BadgesPageClient() {
 
       {/* Personal badges (custom + earned) */}
       {!isLoggedIn() ? (
-        <div className="mt-8 rounded-3xl border border-black/5 bg-white shadow-sm p-8">
-          <h2 className="text-lg font-semibold text-gray-900">Login required</h2>
-          <p className="mt-2 text-sm text-gray-600">
+        <div 
+          className="mt-8 rounded-3xl border shadow-sm p-8 transition-colors duration-300"
+          style={{
+            borderColor: "var(--theme-border)",
+            backgroundColor: "var(--theme-surface)",
+          }}
+        >
+          <h2 
+            className="text-lg font-semibold"
+            style={{ color: "var(--theme-text-primary)" }}
+          >
+            Login required
+          </h2>
+          <p 
+            className="mt-2 text-sm"
+            style={{ color: "var(--theme-text-secondary)" }}
+          >
             Please log in to create and manage your custom badges, and to see which
-            global badges you’ve earned.
+            global badges you've earned.
           </p>
           <button
             type="button"
             onClick={requestLogin}
-            className="mt-5 inline-flex items-center justify-center rounded-full bg-black text-white px-5 py-2 text-sm font-semibold shadow-sm hover:bg-black/90"
+            className="mt-5 inline-flex items-center justify-center rounded-full text-white px-5 py-2 text-sm font-semibold shadow-sm transition"
+            style={{
+              background: isDefault ? "black" : "var(--theme-gradient-primary)",
+            }}
+            onMouseEnter={(e) => {
+              if (isDefault) {
+                e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.9)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (isDefault) {
+                e.currentTarget.style.backgroundColor = "black";
+              }
+            }}
           >
             Login / Sign up
           </button>
@@ -447,18 +710,47 @@ export default function BadgesPageClient() {
       ) : (
         <>
           {/* Earned global badges */}
-          <section className="mt-8 rounded-3xl border border-black/5 bg-white shadow-sm p-8">
+          <section 
+            className="mt-8 rounded-3xl border shadow-sm p-8 transition-colors duration-300"
+            style={{
+              borderColor: "var(--theme-border)",
+              backgroundColor: "var(--theme-surface)",
+            }}
+          >
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Earned global badges</h2>
-                <p className="mt-1 text-sm text-gray-600">
+                <h2 
+                  className="text-lg font-semibold"
+                  style={{ color: "var(--theme-text-primary)" }}
+                >
+                  Earned global badges
+                </h2>
+                <p 
+                  className="mt-1 text-sm"
+                  style={{ color: "var(--theme-text-secondary)" }}
+                >
                   These are global badges currently assigned to you.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={refreshMine}
-                className="rounded-full bg-white text-gray-700 px-4 py-2 text-xs font-semibold border border-black/10 hover:bg-black/5"
+                className="rounded-full px-4 py-2 text-xs font-semibold border transition disabled:opacity-60"
+                style={{
+                  backgroundColor: "var(--theme-surface)",
+                  borderColor: "var(--theme-border)",
+                  color: "var(--theme-text-primary)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!loadingMine) {
+                    e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!loadingMine) {
+                    e.currentTarget.style.backgroundColor = "var(--theme-surface)";
+                  }
+                }}
                 disabled={loadingMine}
               >
                 {loadingMine ? "Refreshing…" : "Refresh"}
@@ -466,16 +758,47 @@ export default function BadgesPageClient() {
             </div>
 
             {loadingMine ? (
-              <div className="mt-4 rounded-2xl border border-black/5 bg-white p-6 text-sm text-gray-600">
+              <div 
+                className="mt-4 rounded-2xl border p-6 text-sm transition-colors duration-300"
+                style={{
+                  borderColor: "var(--theme-border)",
+                  backgroundColor: "var(--theme-surface-elevated)",
+                  color: "var(--theme-text-secondary)",
+                }}
+              >
                 Loading…
               </div>
             ) : loadMineError ? (
-              <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-6">
-                <p className="text-sm font-semibold text-red-800">Couldn’t load your badges</p>
-                <p className="mt-1 text-sm text-red-700">{loadMineError}</p>
+              <div 
+                className="mt-4 rounded-2xl border p-6 transition-colors duration-300"
+                style={{
+                  borderColor: "var(--theme-error)",
+                  backgroundColor: "var(--theme-error)",
+                  opacity: 0.1,
+                }}
+              >
+                <p 
+                  className="text-sm font-semibold"
+                  style={{ color: "var(--theme-error)" }}
+                >
+                  Couldn't load your badges
+                </p>
+                <p 
+                  className="mt-1 text-sm"
+                  style={{ color: "var(--theme-error)", opacity: 0.8 }}
+                >
+                  {loadMineError}
+                </p>
               </div>
             ) : earnedGlobalBadges.length === 0 ? (
-              <div className="mt-4 rounded-2xl border border-black/5 bg-white p-6 text-sm text-gray-600">
+              <div 
+                className="mt-4 rounded-2xl border p-6 text-sm transition-colors duration-300"
+                style={{
+                  borderColor: "var(--theme-border)",
+                  backgroundColor: "var(--theme-surface-elevated)",
+                  color: "var(--theme-text-secondary)",
+                }}
+              >
                 No global badges assigned yet.
               </div>
             ) : (
@@ -485,7 +808,11 @@ export default function BadgesPageClient() {
                   return (
                     <div
                       key={b.id || `${b.name}-${b.logoKey || ""}`}
-                      className="rounded-3xl border border-black/5 bg-white shadow-sm p-5"
+                      className="rounded-3xl border shadow-sm p-5 transition-colors duration-300"
+                      style={{
+                        borderColor: "var(--theme-border)",
+                        backgroundColor: "var(--theme-surface)",
+                      }}
                     >
                       <div className="flex items-start gap-4">
                         <button
@@ -493,7 +820,11 @@ export default function BadgesPageClient() {
                           title="Preview badge"
                           onMouseEnter={() => setPreview({ kind: "global_earned", badge: b })}
                           onClick={() => setPreview({ kind: "global_earned", badge: b })}
-                          className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-pink-50 border border-black/5 overflow-hidden shrink-0 cursor-zoom-in"
+                          className="relative w-14 h-14 rounded-2xl border overflow-hidden shrink-0 cursor-zoom-in transition-colors duration-300"
+                          style={{
+                            borderColor: "var(--theme-border)",
+                            backgroundColor: isDefault ? "rgb(238, 242, 255)" : "var(--theme-surface-elevated)",
+                          }}
                         >
                           {logo ? (
                             <Image
@@ -503,17 +834,26 @@ export default function BadgesPageClient() {
                               className="object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                            <div 
+                              className="w-full h-full flex items-center justify-center text-sm"
+                              style={{ color: "var(--theme-text-tertiary)" }}
+                            >
                               ✦
                             </div>
                           )}
                         </button>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
+                          <p 
+                            className="text-sm font-semibold truncate"
+                            style={{ color: "var(--theme-text-primary)" }}
+                          >
                             {b.name}
                           </p>
                           {b.description ? (
-                            <p className="mt-1 text-xs text-gray-600 line-clamp-3">
+                            <p 
+                              className="mt-1 text-xs line-clamp-3"
+                              style={{ color: "var(--theme-text-secondary)" }}
+                            >
                               {b.description}
                             </p>
                           ) : null}
@@ -527,11 +867,25 @@ export default function BadgesPageClient() {
           </section>
 
           {/* Create */}
-          <section className="mt-8 rounded-3xl border border-black/5 bg-white shadow-sm p-8">
+          <section 
+            className="mt-8 rounded-3xl border shadow-sm p-8 transition-colors duration-300"
+            style={{
+              borderColor: "var(--theme-border)",
+              backgroundColor: "var(--theme-surface)",
+            }}
+          >
             <div className="flex items-start justify-between gap-6">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Create a badge</h2>
-                <p className="mt-1 text-sm text-gray-600">
+                <h2 
+                  className="text-lg font-semibold"
+                  style={{ color: "var(--theme-text-primary)" }}
+                >
+                  Create a badge
+                </h2>
+                <p 
+                  className="mt-1 text-sm"
+                  style={{ color: "var(--theme-text-secondary)" }}
+                >
                   Upload a small logo and add a name + description.
                 </p>
               </div>
@@ -539,12 +893,33 @@ export default function BadgesPageClient() {
                 type="button"
                 onClick={submit}
                 disabled={!canCreate || creating}
-                className={[
-                  "inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-semibold shadow-sm",
+                className="inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-semibold shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed"
+                style={
                   canCreate && !creating
-                    ? "bg-gradient-to-r from-orange-500 via-pink-500 to-red-500 text-white hover:opacity-95"
-                    : "bg-gray-200 text-gray-500 cursor-not-allowed",
-                ].join(" ")}
+                    ? {
+                        background: isDefault 
+                          ? "linear-gradient(to right, #f97316, #ec4899, #ef4444)" 
+                          : "var(--theme-gradient-primary)",
+                        color: "var(--theme-text-inverse)",
+                        boxShadow: isDefault 
+                          ? "0 1px 3px rgba(249, 115, 22, 0.2)" 
+                          : "0 1px 3px var(--theme-shadow)",
+                      }
+                    : {
+                        backgroundColor: "var(--theme-surface-hover)",
+                        color: "var(--theme-text-tertiary)",
+                      }
+                }
+                onMouseEnter={(e) => {
+                  if (canCreate && !creating) {
+                    e.currentTarget.style.opacity = "0.95";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (canCreate && !creating) {
+                    e.currentTarget.style.opacity = "1";
+                  }
+                }}
               >
                 {creating ? "Creating…" : canCreate ? "Create badge" : "Limit reached"}
               </button>
@@ -552,31 +927,83 @@ export default function BadgesPageClient() {
 
             <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
               <label className="block">
-                <span className="text-xs font-semibold text-gray-700">Name</span>
+                <span 
+                  className="text-xs font-semibold"
+                  style={{ color: "var(--theme-text-primary)" }}
+                >
+                  Name
+                </span>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="My Hiking Buddy"
-                  className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-300"
+                  className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-colors duration-300"
+                  style={{
+                    borderColor: "var(--theme-border)",
+                    backgroundColor: "var(--theme-surface-elevated)",
+                    color: "var(--theme-text-primary)",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
+                    e.currentTarget.style.boxShadow = isDefault 
+                      ? "0 0 0 2px rgba(249, 115, 22, 0.2)" 
+                      : "0 0 0 2px var(--theme-accent-light)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "var(--theme-border)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
                   maxLength={40}
                 />
               </label>
 
               <label className="block md:col-span-2">
-                <span className="text-xs font-semibold text-gray-700">Description</span>
+                <span 
+                  className="text-xs font-semibold"
+                  style={{ color: "var(--theme-text-primary)" }}
+                >
+                  Description
+                </span>
                 <input
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Personal badge"
-                  className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-300"
+                  className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-colors duration-300"
+                  style={{
+                    borderColor: "var(--theme-border)",
+                    backgroundColor: "var(--theme-surface-elevated)",
+                    color: "var(--theme-text-primary)",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
+                    e.currentTarget.style.boxShadow = isDefault 
+                      ? "0 0 0 2px rgba(249, 115, 22, 0.2)" 
+                      : "0 0 0 2px var(--theme-accent-light)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "var(--theme-border)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
                   maxLength={140}
                 />
               </label>
 
               <div className="md:col-span-3">
-                <div className="flex items-center justify-between gap-4 rounded-2xl border border-black/10 bg-gradient-to-br from-orange-50 via-white to-pink-50 px-4 py-4">
+                <div 
+                  className="flex items-center justify-between gap-4 rounded-2xl border px-4 py-4 transition-colors duration-300"
+                  style={{
+                    borderColor: "var(--theme-border)",
+                    backgroundColor: isDefault ? "rgb(255, 247, 237)" : "var(--theme-surface-elevated)",
+                  }}
+                >
                   <div className="flex items-center gap-4">
-                    <div className="relative w-14 h-14 rounded-2xl bg-white shadow-sm border border-black/5 overflow-hidden">
+                    <div 
+                      className="relative w-14 h-14 rounded-2xl shadow-sm border overflow-hidden transition-colors duration-300"
+                      style={{
+                        borderColor: "var(--theme-border)",
+                        backgroundColor: "var(--theme-surface)",
+                      }}
+                    >
                       {file ? (
                         <Image
                           src={URL.createObjectURL(file)}
@@ -585,14 +1012,25 @@ export default function BadgesPageClient() {
                           className="object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                        <div 
+                          className="w-full h-full flex items-center justify-center text-sm"
+                          style={{ color: "var(--theme-text-tertiary)" }}
+                        >
                           Logo
                         </div>
                       )}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">Badge logo</p>
-                      <p className="mt-0.5 text-xs text-gray-600">
+                      <p 
+                        className="text-sm font-semibold"
+                        style={{ color: "var(--theme-text-primary)" }}
+                      >
+                        Badge logo
+                      </p>
+                      <p 
+                        className="mt-0.5 text-xs"
+                        style={{ color: "var(--theme-text-secondary)" }}
+                      >
                         PNG/JPG recommended. Square images look best.
                       </p>
                     </div>
@@ -609,7 +1047,24 @@ export default function BadgesPageClient() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="rounded-full bg-black text-white px-4 py-2 text-xs font-semibold hover:bg-black/90"
+                      className="rounded-full text-white px-4 py-2 text-xs font-semibold transition"
+                      style={{
+                        background: isDefault ? "black" : "var(--theme-gradient-primary)",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (isDefault) {
+                          e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.9)";
+                        } else {
+                          e.currentTarget.style.opacity = "0.9";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (isDefault) {
+                          e.currentTarget.style.backgroundColor = "black";
+                        } else {
+                          e.currentTarget.style.opacity = "1";
+                        }
+                      }}
                     >
                       Choose file
                     </button>
@@ -617,7 +1072,18 @@ export default function BadgesPageClient() {
                       <button
                         type="button"
                         onClick={() => onPickFile(null)}
-                        className="rounded-full bg-white text-gray-700 px-4 py-2 text-xs font-semibold border border-black/10 hover:bg-black/5"
+                        className="rounded-full border px-4 py-2 text-xs font-semibold transition"
+                        style={{
+                          backgroundColor: "var(--theme-surface)",
+                          borderColor: "var(--theme-border)",
+                          color: "var(--theme-text-primary)",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--theme-surface)";
+                        }}
                       >
                         Remove
                       </button>
@@ -628,7 +1094,15 @@ export default function BadgesPageClient() {
             </div>
 
             {createError && (
-              <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div 
+                className="mt-4 rounded-2xl border px-4 py-3 text-sm transition-colors duration-300"
+                style={{
+                  borderColor: "var(--theme-error)",
+                  backgroundColor: "var(--theme-error)",
+                  opacity: 0.1,
+                  color: "var(--theme-error)",
+                }}
+              >
                 {createError}
               </div>
             )}
@@ -637,11 +1111,31 @@ export default function BadgesPageClient() {
           {/* List */}
           <section className="mt-8">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-lg font-semibold text-gray-900">Your badges</h2>
+              <h2 
+                className="text-lg font-semibold"
+                style={{ color: "var(--theme-text-primary)" }}
+              >
+                Your badges
+              </h2>
               <button
                 type="button"
                 onClick={refreshMine}
-                className="rounded-full bg-white text-gray-700 px-4 py-2 text-xs font-semibold border border-black/10 hover:bg-black/5"
+                className="rounded-full px-4 py-2 text-xs font-semibold border transition disabled:opacity-60"
+                style={{
+                  backgroundColor: "var(--theme-surface)",
+                  borderColor: "var(--theme-border)",
+                  color: "var(--theme-text-primary)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!loadingMine) {
+                    e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!loadingMine) {
+                    e.currentTarget.style.backgroundColor = "var(--theme-surface)";
+                  }
+                }}
                 disabled={loadingMine}
               >
                 {loadingMine ? "Refreshing…" : "Refresh"}
@@ -649,17 +1143,50 @@ export default function BadgesPageClient() {
             </div>
 
             {loadingMine ? (
-              <div className="mt-4 rounded-3xl border border-black/5 bg-white shadow-sm p-8 text-sm text-gray-600">
+              <div 
+                className="mt-4 rounded-3xl border shadow-sm p-8 text-sm transition-colors duration-300"
+                style={{
+                  borderColor: "var(--theme-border)",
+                  backgroundColor: "var(--theme-surface)",
+                  color: "var(--theme-text-secondary)",
+                }}
+              >
                 Loading badges…
               </div>
             ) : loadMineError ? (
-              <div className="mt-4 rounded-3xl border border-red-200 bg-red-50 p-8">
-                <p className="text-sm font-semibold text-red-800">Couldn’t load badges</p>
-                <p className="mt-1 text-sm text-red-700">{loadMineError}</p>
+              <div 
+                className="mt-4 rounded-3xl border p-8 transition-colors duration-300"
+                style={{
+                  borderColor: "var(--theme-error)",
+                  backgroundColor: "var(--theme-error)",
+                  opacity: 0.1,
+                }}
+              >
+                <p 
+                  className="text-sm font-semibold"
+                  style={{ color: "var(--theme-error)" }}
+                >
+                  Couldn't load badges
+                </p>
+                <p 
+                  className="mt-1 text-sm"
+                  style={{ color: "var(--theme-error)", opacity: 0.8 }}
+                >
+                  {loadMineError}
+                </p>
               </div>
             ) : customBadges.length === 0 ? (
-              <div className="mt-4 rounded-3xl border border-black/5 bg-white shadow-sm p-8">
-                <p className="text-sm text-gray-600">
+              <div 
+                className="mt-4 rounded-3xl border shadow-sm p-8 transition-colors duration-300"
+                style={{
+                  borderColor: "var(--theme-border)",
+                  backgroundColor: "var(--theme-surface)",
+                }}
+              >
+                <p 
+                  className="text-sm"
+                  style={{ color: "var(--theme-text-secondary)" }}
+                >
                   No custom badges yet. Create your first one above.
                 </p>
               </div>
@@ -670,7 +1197,11 @@ export default function BadgesPageClient() {
                   return (
                     <div
                       key={b.id || `${b.name}-${b.logoKey || ""}`}
-                      className="rounded-3xl border border-black/5 bg-white shadow-sm p-5"
+                      className="rounded-3xl border shadow-sm p-5 transition-colors duration-300"
+                      style={{
+                        borderColor: "var(--theme-border)",
+                        backgroundColor: "var(--theme-surface)",
+                      }}
                     >
                       <div className="flex items-start gap-4">
                         <button
@@ -678,7 +1209,11 @@ export default function BadgesPageClient() {
                           title="Preview badge"
                           onMouseEnter={() => setPreview({ kind: "custom", badge: b })}
                           onClick={() => setPreview({ kind: "custom", badge: b })}
-                          className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-100 via-white to-pink-100 border border-black/5 overflow-hidden shrink-0 cursor-zoom-in"
+                          className="relative w-14 h-14 rounded-2xl border overflow-hidden shrink-0 cursor-zoom-in transition-colors duration-300"
+                          style={{
+                            borderColor: "var(--theme-border)",
+                            backgroundColor: isDefault ? "rgb(255, 237, 213)" : "var(--theme-surface-elevated)",
+                          }}
                         >
                           {logo ? (
                             <Image
@@ -688,25 +1223,42 @@ export default function BadgesPageClient() {
                               className="object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                            <div 
+                              className="w-full h-full flex items-center justify-center text-sm"
+                              style={{ color: "var(--theme-text-tertiary)" }}
+                            >
                               🏷️
                             </div>
                           )}
                         </button>
 
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
+                          <p 
+                            className="text-sm font-semibold truncate"
+                            style={{ color: "var(--theme-text-primary)" }}
+                          >
                             {b.name}
                           </p>
                           {b.description ? (
-                            <p className="mt-1 text-xs text-gray-600 line-clamp-3">
+                            <p 
+                              className="mt-1 text-xs line-clamp-3"
+                              style={{ color: "var(--theme-text-secondary)" }}
+                            >
                               {b.description}
                             </p>
                           ) : (
-                            <p className="mt-1 text-xs text-gray-500">No description</p>
+                            <p 
+                              className="mt-1 text-xs"
+                              style={{ color: "var(--theme-text-tertiary)" }}
+                            >
+                              No description
+                            </p>
                           )}
                           {b.logoKey ? (
-                            <p className="mt-2 text-[11px] text-gray-400 truncate">
+                            <p 
+                              className="mt-2 text-[11px] truncate"
+                              style={{ color: "var(--theme-text-tertiary)" }}
+                            >
                               key: {b.logoKey}
                             </p>
                           ) : null}

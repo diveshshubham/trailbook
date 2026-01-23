@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useTheme } from "@/contexts/ThemeContext";
 
 import {
   getMyProfile,
@@ -73,6 +74,8 @@ function syncLocalUser(me: MeProfile) {
 }
 
 export default function ProfilePageClient() {
+  const { themeKey } = useTheme();
+  const isDefault = themeKey === "default";
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -243,29 +246,74 @@ export default function ProfilePageClient() {
     <div className="max-w-6xl mx-auto px-6 py-10">
       <div className="flex items-end justify-between gap-6">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+          <p 
+            className="text-[10px] uppercase tracking-[0.35em] font-semibold"
+            style={{ color: "var(--theme-text-tertiary)" }}
+          >
             Profile
           </p>
-          <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-gray-900">
+          <h1 
+            className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight"
+            style={{ color: "var(--theme-text-primary)" }}
+          >
             Your identity, your vibe
           </h1>
-          <p className="mt-2 text-gray-500 max-w-2xl">
+          <p 
+            className="mt-2 max-w-2xl"
+            style={{ color: "var(--theme-text-secondary)" }}
+          >
             Keep your profile crisp—so your albums feel like a real product.
           </p>
         </div>
 
         <Link
           href="/"
-          className="rounded-full px-5 py-2.5 bg-white border border-black/10 text-sm font-semibold text-gray-800 hover:bg-gray-50 transition"
+          className="rounded-full px-5 py-2.5 border text-sm font-semibold transition"
+          style={{
+            backgroundColor: "var(--theme-surface)",
+            borderColor: "var(--theme-border)",
+            color: "var(--theme-text-primary)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "var(--theme-surface)";
+          }}
         >
           Back to library
         </Link>
       </div>
 
-      <section className="mt-10 relative overflow-hidden rounded-3xl border border-black/5 bg-white shadow-sm">
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-white to-pink-50" />
-        <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-orange-200/30 blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-pink-200/30 blur-3xl" />
+      <section 
+        className="mt-10 relative overflow-hidden rounded-3xl border shadow-sm transition-colors duration-300"
+        style={{
+          borderColor: "var(--theme-border)",
+          backgroundColor: "var(--theme-surface)",
+        }}
+      >
+        {isDefault ? (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-white to-pink-50" />
+            <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-orange-200/30 blur-3xl" />
+            <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-pink-200/30 blur-3xl" />
+          </>
+        ) : (
+          <>
+            <div
+              className="absolute inset-0 opacity-50"
+              style={{ background: "var(--theme-gradient-secondary)" }}
+            />
+            <div
+              className="absolute -top-24 -right-24 w-72 h-72 rounded-full blur-3xl"
+              style={{ backgroundColor: "var(--theme-accent)", opacity: 0.1 }}
+            />
+            <div
+              className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full blur-3xl"
+              style={{ backgroundColor: "var(--theme-accent)", opacity: 0.1 }}
+            />
+          </>
+        )}
 
         <div className="relative px-8 py-10 flex flex-col md:flex-row md:items-center md:justify-between gap-8">
           <div className="flex items-center gap-6">
@@ -276,7 +324,11 @@ export default function ProfilePageClient() {
                   if (!effectiveProfilePhoto) return;
                   setViewerOpen(true);
                 }}
-                className="h-20 w-20 rounded-3xl bg-black/5 overflow-hidden ring-4 ring-white/70 shadow-md cursor-zoom-in disabled:cursor-default"
+                className="h-20 w-20 rounded-3xl overflow-hidden ring-4 shadow-md cursor-zoom-in disabled:cursor-default transition-colors duration-300"
+                style={{
+                  backgroundColor: "var(--theme-surface-elevated)",
+                  ringColor: "var(--theme-surface)",
+                }}
                 disabled={!effectiveProfilePhoto}
                 aria-label="Open profile photo"
                 title={effectiveProfilePhoto ? "View photo" : "No photo"}
@@ -291,7 +343,10 @@ export default function ProfilePageClient() {
                     ].join(" ")}
                   />
                 ) : (
-                  <div className="h-full w-full grid place-items-center text-gray-400 text-sm">
+                  <div 
+                    className="h-full w-full grid place-items-center text-sm"
+                    style={{ color: "var(--theme-text-tertiary)" }}
+                  >
                     {displayName.slice(0, 1).toUpperCase()}
                   </div>
                 )}
@@ -301,7 +356,24 @@ export default function ProfilePageClient() {
                 type="button"
                 onClick={onPickPhoto}
                 disabled={uploading || loading}
-                className="absolute -bottom-2 -right-2 h-10 w-10 rounded-full bg-white/90 border border-black/10 shadow-sm hover:bg-white transition grid place-items-center disabled:opacity-60"
+                className="absolute -bottom-2 -right-2 h-10 w-10 rounded-full border shadow-sm transition grid place-items-center disabled:opacity-60"
+                style={{
+                  backgroundColor: "var(--theme-backdrop)",
+                  borderColor: "var(--theme-border)",
+                  color: "var(--theme-text-secondary)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!uploading && !loading) {
+                    e.currentTarget.style.backgroundColor = "var(--theme-surface-elevated)";
+                    e.currentTarget.style.color = "var(--theme-accent)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!uploading && !loading) {
+                    e.currentTarget.style.backgroundColor = "var(--theme-backdrop)";
+                    e.currentTarget.style.color = "var(--theme-text-secondary)";
+                  }
+                }}
                 title="Change photo"
                 aria-label="Change photo"
               >
@@ -331,13 +403,22 @@ export default function ProfilePageClient() {
             </div>
 
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
-                {data?.profile ? "Creator profile" : "Let’s set you up"}
+              <p 
+                className="text-[10px] uppercase tracking-[0.35em] font-semibold"
+                style={{ color: "var(--theme-text-tertiary)" }}
+              >
+                {data?.profile ? "Creator profile" : "Let's set you up"}
               </p>
-              <h2 className="mt-2 text-2xl font-bold tracking-tight text-gray-900 truncate">
+              <h2 
+                className="mt-2 text-2xl font-bold tracking-tight truncate"
+                style={{ color: "var(--theme-text-primary)" }}
+              >
                 {loading ? "Loading…" : displayName}
               </h2>
-              <p className="mt-2 text-gray-500 text-sm">
+              <p 
+                className="mt-2 text-sm"
+                style={{ color: "var(--theme-text-secondary)" }}
+              >
                 {data?.user?.email || "Add your email"}{" "}
                 {data?.user?.phone ? `· ${data.user.phone}` : ""}
               </p>
@@ -349,7 +430,15 @@ export default function ProfilePageClient() {
               type="button"
               onClick={onSave}
               disabled={loading || saving}
-              className="rounded-full px-7 py-3 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-semibold shadow-lg shadow-orange-500/20 hover:opacity-95 active:scale-95 transition disabled:opacity-60"
+              className="rounded-full px-7 py-3 text-white font-semibold shadow-lg hover:opacity-95 active:scale-95 transition disabled:opacity-60"
+              style={{
+                background: isDefault 
+                  ? "linear-gradient(to right, #f97316, #ec4899)" 
+                  : "var(--theme-gradient-primary)",
+                boxShadow: isDefault 
+                  ? "0 10px 15px -3px rgba(249, 115, 22, 0.2), 0 4px 6px -2px rgba(249, 115, 22, 0.1)" 
+                  : "0 10px 15px -3px var(--theme-shadow-strong), 0 4px 6px -2px var(--theme-shadow)",
+              }}
             >
               {saving ? "Saving…" : "Save changes"}
             </button>
@@ -359,23 +448,51 @@ export default function ProfilePageClient() {
 
       <div className="mt-6">
         {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 text-red-700 px-5 py-4">
+          <div 
+            className="rounded-2xl border px-5 py-4 transition-colors duration-300"
+            style={{
+              borderColor: "var(--theme-error)",
+              backgroundColor: "var(--theme-error)",
+              opacity: 0.1,
+              color: "var(--theme-error)",
+            }}
+          >
             {error}
           </div>
         )}
         {success && (
-          <div className="rounded-2xl border border-green-200 bg-green-50 text-green-700 px-5 py-4">
+          <div 
+            className="rounded-2xl border px-5 py-4 transition-colors duration-300"
+            style={{
+              borderColor: "var(--theme-success)",
+              backgroundColor: "var(--theme-success)",
+              opacity: 0.1,
+              color: "var(--theme-success)",
+            }}
+          >
             {success}
           </div>
         )}
       </div>
 
       <section className="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 rounded-3xl border border-black/5 bg-white shadow-sm p-8">
-          <p className="text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+        <div 
+          className="lg:col-span-2 rounded-3xl border shadow-sm p-8 transition-colors duration-300"
+          style={{
+            borderColor: "var(--theme-border)",
+            backgroundColor: "var(--theme-surface)",
+          }}
+        >
+          <p 
+            className="text-[10px] uppercase tracking-[0.35em] font-semibold"
+            style={{ color: "var(--theme-text-tertiary)" }}
+          >
             Essentials
           </p>
-          <h3 className="mt-2 text-xl font-bold tracking-tight text-gray-900">
+          <h3 
+            className="mt-2 text-xl font-bold tracking-tight"
+            style={{ color: "var(--theme-text-primary)" }}
+          >
             The basics people will see
           </h3>
 
@@ -385,7 +502,22 @@ export default function ProfilePageClient() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="John Doe"
-                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-200"
+                className="w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-colors duration-300"
+                style={{
+                  borderColor: "var(--theme-border)",
+                  backgroundColor: "var(--theme-surface-elevated)",
+                  color: "var(--theme-text-primary)",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
+                  e.currentTarget.style.boxShadow = isDefault 
+                    ? "0 0 0 2px rgba(249, 115, 22, 0.2)" 
+                    : "0 0 0 2px var(--theme-accent-light)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "var(--theme-border)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
               />
             </Field>
 
@@ -394,7 +526,22 @@ export default function ProfilePageClient() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+91 99999 99999"
-                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-200"
+                className="w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-colors duration-300"
+                style={{
+                  borderColor: "var(--theme-border)",
+                  backgroundColor: "var(--theme-surface-elevated)",
+                  color: "var(--theme-text-primary)",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
+                  e.currentTarget.style.boxShadow = isDefault 
+                    ? "0 0 0 2px rgba(249, 115, 22, 0.2)" 
+                    : "0 0 0 2px var(--theme-accent-light)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "var(--theme-border)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
               />
             </Field>
 
@@ -403,7 +550,22 @@ export default function ProfilePageClient() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-200"
+                className="w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-colors duration-300"
+                style={{
+                  borderColor: "var(--theme-border)",
+                  backgroundColor: "var(--theme-surface-elevated)",
+                  color: "var(--theme-text-primary)",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
+                  e.currentTarget.style.boxShadow = isDefault 
+                    ? "0 0 0 2px rgba(249, 115, 22, 0.2)" 
+                    : "0 0 0 2px var(--theme-accent-light)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "var(--theme-border)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
               />
             </Field>
 
@@ -412,7 +574,22 @@ export default function ProfilePageClient() {
                 value={tagsText}
                 onChange={(e) => setTagsText(e.target.value)}
                 placeholder="trekking, cycling"
-                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-200"
+                className="w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-colors duration-300"
+                style={{
+                  borderColor: "var(--theme-border)",
+                  backgroundColor: "var(--theme-surface-elevated)",
+                  color: "var(--theme-text-primary)",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
+                  e.currentTarget.style.boxShadow = isDefault 
+                    ? "0 0 0 2px rgba(249, 115, 22, 0.2)" 
+                    : "0 0 0 2px var(--theme-accent-light)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "var(--theme-border)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
               />
             </Field>
           </div>
@@ -424,17 +601,44 @@ export default function ProfilePageClient() {
                 onChange={(e) => setBio(e.target.value)}
                 placeholder="A line or two about you…"
                 rows={4}
-                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-200 resize-none"
+                className="w-full rounded-2xl border px-4 py-3 text-sm outline-none resize-none transition-colors duration-300"
+                style={{
+                  borderColor: "var(--theme-border)",
+                  backgroundColor: "var(--theme-surface-elevated)",
+                  color: "var(--theme-text-primary)",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
+                  e.currentTarget.style.boxShadow = isDefault 
+                    ? "0 0 0 2px rgba(249, 115, 22, 0.2)" 
+                    : "0 0 0 2px var(--theme-accent-light)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "var(--theme-border)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
               />
             </Field>
           </div>
         </div>
 
-        <div className="rounded-3xl border border-black/5 bg-white shadow-sm p-8">
-          <p className="text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+        <div 
+          className="rounded-3xl border shadow-sm p-8 transition-colors duration-300"
+          style={{
+            borderColor: "var(--theme-border)",
+            backgroundColor: "var(--theme-surface)",
+          }}
+        >
+          <p 
+            className="text-[10px] uppercase tracking-[0.35em] font-semibold"
+            style={{ color: "var(--theme-text-tertiary)" }}
+          >
             Status
           </p>
-          <h3 className="mt-2 text-xl font-bold tracking-tight text-gray-900">
+          <h3 
+            className="mt-2 text-xl font-bold tracking-tight"
+            style={{ color: "var(--theme-text-primary)" }}
+          >
             Profile completeness
           </h3>
 
@@ -444,17 +648,42 @@ export default function ProfilePageClient() {
             <Stat label="Tags" value={`${parseTags(tagsText).length}`} />
           </div>
 
-          <div className="mt-8 rounded-2xl border border-black/5 bg-gradient-to-br from-gray-50 to-white p-5">
-            <p className="text-sm font-semibold text-gray-900">Pro tip</p>
-            <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-              Add 2–4 tags and a short bio—your albums will feel instantly more “real product”.
+          <div 
+            className="mt-8 rounded-2xl border p-5 transition-colors duration-300"
+            style={{
+              borderColor: "var(--theme-border)",
+              backgroundColor: "var(--theme-surface-elevated)",
+            }}
+          >
+            <p 
+              className="text-sm font-semibold"
+              style={{ color: "var(--theme-text-primary)" }}
+            >
+              Pro tip
+            </p>
+            <p 
+              className="mt-2 text-sm leading-relaxed"
+              style={{ color: "var(--theme-text-secondary)" }}
+            >
+              Add 2–4 tags and a short bio—your albums will feel instantly more "real product".
             </p>
           </div>
 
           <button
             type="button"
             onClick={() => setAdvancedOpen((v) => !v)}
-            className="mt-8 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50 transition"
+            className="mt-8 w-full rounded-2xl border px-4 py-3 text-sm font-semibold transition"
+            style={{
+              borderColor: "var(--theme-border)",
+              backgroundColor: "var(--theme-surface)",
+              color: "var(--theme-text-primary)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--theme-surface)";
+            }}
           >
             {advancedOpen ? "Hide advanced" : "Show advanced"}
           </button>
@@ -467,7 +696,22 @@ export default function ProfilePageClient() {
                   onChange={(e) => setFavoriteAlbumIdsText(e.target.value)}
                   placeholder="695e54de..., 695e1234..."
                   rows={3}
-                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-200 resize-none"
+                  className="w-full rounded-2xl border px-4 py-3 text-sm outline-none resize-none transition-colors duration-300"
+                  style={{
+                    borderColor: "var(--theme-border)",
+                    backgroundColor: "var(--theme-surface-elevated)",
+                    color: "var(--theme-text-primary)",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
+                    e.currentTarget.style.boxShadow = isDefault 
+                      ? "0 0 0 2px rgba(249, 115, 22, 0.2)" 
+                      : "0 0 0 2px var(--theme-accent-light)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "var(--theme-border)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
                 />
               </Field>
 
@@ -477,7 +721,22 @@ export default function ProfilePageClient() {
                   onChange={(e) => setFavoriteMediaIdsText(e.target.value)}
                   placeholder="695e54df..., 695e5678..."
                   rows={3}
-                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-200 resize-none"
+                  className="w-full rounded-2xl border px-4 py-3 text-sm outline-none resize-none transition-colors duration-300"
+                  style={{
+                    borderColor: "var(--theme-border)",
+                    backgroundColor: "var(--theme-surface-elevated)",
+                    color: "var(--theme-text-primary)",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
+                    e.currentTarget.style.boxShadow = isDefault 
+                      ? "0 0 0 2px rgba(249, 115, 22, 0.2)" 
+                      : "0 0 0 2px var(--theme-accent-light)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "var(--theme-border)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
                 />
               </Field>
             </div>
@@ -524,7 +783,10 @@ export default function ProfilePageClient() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+      <span 
+        className="block text-[10px] uppercase tracking-[0.35em] font-semibold"
+        style={{ color: "var(--theme-text-tertiary)" }}
+      >
         {label}
       </span>
       <div className="mt-2">{children}</div>
@@ -534,9 +796,25 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-black/5 bg-white px-4 py-3">
-      <span className="text-sm text-gray-600">{label}</span>
-      <span className="text-sm font-semibold text-gray-900">{value}</span>
+    <div 
+      className="flex items-center justify-between rounded-2xl border px-4 py-3 transition-colors duration-300"
+      style={{
+        borderColor: "var(--theme-border)",
+        backgroundColor: "var(--theme-surface-elevated)",
+      }}
+    >
+      <span 
+        className="text-sm"
+        style={{ color: "var(--theme-text-secondary)" }}
+      >
+        {label}
+      </span>
+      <span 
+        className="text-sm font-semibold"
+        style={{ color: "var(--theme-text-primary)" }}
+      >
+        {value}
+      </span>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "@/contexts/ThemeContext";
 
 import AuthModal from "@/components/Auth/AuthModal";
 import EmailOrPhoneStep from "@/components/Auth/EmailOrPhoneStep";
@@ -58,6 +59,9 @@ function buildFallbackUser(contact: string): User {
 
 export default function Navbar() {
   const router = useRouter();
+  const { themeKey } = useTheme();
+  const isDefault = themeKey === "default";
+  
   // 🔹 Auth / modal state
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"input" | "otp">("input");
@@ -154,12 +158,12 @@ export default function Navbar() {
   return (
     <>
       {/* HEADER */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-white/70 border-b border-black/5">
+      <header className="sticky top-0 z-50 backdrop-blur-md border-b transition-all duration-300" style={{ backgroundColor: "var(--theme-backdrop)", borderColor: "var(--theme-border)" }}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           
           {/* LOGO */}
-          <div className="flex items-center gap-4">
-            <div className="relative w-14 h-14 transition-transform duration-300 hover:scale-105">
+          <Link href="/" className="flex items-center gap-4 group cursor-pointer">
+            <div className="relative w-14 h-14 transition-transform duration-300 group-hover:scale-105">
               <Image
                 src="/logo.png"
                 alt="Trailbook logo"
@@ -170,14 +174,14 @@ export default function Navbar() {
             </div>
 
             <div className="flex flex-col">
-              <span className="text-2xl font-semibold tracking-[0.28em] bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 bg-clip-text text-transparent">
+              <span className="text-2xl font-semibold tracking-[0.28em] text-[var(--theme-text-primary)] transition-colors duration-300">
                 Trailbook
               </span>
-              <span className="text-xs tracking-widest text-gray-500 mt-1">
+              <span className="text-xs tracking-widest text-[var(--theme-text-tertiary)] mt-1 transition-colors duration-300">
                 stories from the wild
               </span>
             </div>
-          </div>
+          </Link>
 
           {/* RIGHT SIDE */}
           {!loggedIn ? (
@@ -188,10 +192,12 @@ export default function Navbar() {
                 setStep("input");
                 setValue("");
               }}
-              className="group relative overflow-hidden rounded-full px-6 py-2"
+              className="group relative overflow-hidden rounded-full px-6 py-2 transition-all duration-300 group-hover:scale-105"
+              style={{
+                background: isDefault ? "linear-gradient(to right, #f97316, #ec4899)" : "var(--theme-gradient-primary)",
+              }}
             >
-              <span className="absolute inset-0 bg-gradient-to-r from-orange-400 via-pink-500 to-red-500 transition-all duration-300 group-hover:scale-110" />
-              <span className="absolute inset-0 bg-white/20 backdrop-blur-sm" />
+              <span className="absolute inset-0 backdrop-blur-sm opacity-20" />
               <span className="relative z-10 text-sm font-semibold text-white">
                 Login / Sign up
               </span>
@@ -205,44 +211,65 @@ export default function Navbar() {
                 onClick={() => setMenuOpen((prev) => !prev)}
                 className={[
                   "w-10 h-10 rounded-full object-cover cursor-pointer",
-                  "ring-2 ring-black/5 shadow-sm",
+                  "ring-2 ring-[var(--theme-border)] shadow-theme",
                   "transition-all duration-200 ease-out",
-                  "hover:scale-110 hover:ring-indigo-400/40 hover:shadow-md",
+                  "hover:scale-110 hover:ring-[var(--theme-accent)]/40 hover:shadow-theme-md",
                   "motion-reduce:transform-none motion-reduce:transition-none",
                 ].join(" ")}
               />
 
               {menuOpen && (
-                <div className="absolute right-0 mt-3 w-56 rounded-2xl bg-white/90 backdrop-blur-xl shadow-xl shadow-black/10 border border-black/5 z-50 animate-fadeIn overflow-hidden">
-                  <div className="px-4 py-4 border-b border-black/5">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{user?.name}</p>
-                    <p className="mt-1 text-xs text-gray-500 truncate">{user?.email || "Signed in"}</p>
+                <div className="absolute right-0 mt-3 w-64 rounded-2xl backdrop-blur-xl shadow-theme-xl z-50 animate-fadeIn overflow-hidden" style={{ backgroundColor: "var(--theme-backdrop)", borderColor: "var(--theme-border)", borderWidth: "1px", borderStyle: "solid" }}>
+                  <div className="px-4 py-4 border-b" style={{ borderColor: "var(--theme-border)" }}>
+                    <p className="text-sm font-semibold truncate" style={{ color: "var(--theme-text-primary)" }}>{user?.name}</p>
+                    <p className="mt-1 text-xs truncate" style={{ color: "var(--theme-text-tertiary)" }}>{user?.email || "Signed in"}</p>
                   </div>
 
                   <Link
-                    href="/"
-                    className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm text-gray-800 hover:bg-black/5 transition"
+                    href="/themes"
+                    className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm transition"
+                    style={{ color: "var(--theme-text-primary)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                     onClick={() => setMenuOpen(false)}
                   >
-                    <span className="text-gray-400">📚</span>
+                    <span style={{ color: "var(--theme-text-tertiary)" }}>🎨</span>
+                    Themes
+                  </Link>
+
+                  <Link
+                    href="/"
+                    className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm transition"
+                    style={{ color: "var(--theme-text-primary)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <span style={{ color: "var(--theme-text-tertiary)" }}>📚</span>
                     My Albums
                   </Link>
 
                   <Link
                     href="/profile"
-                    className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm text-gray-800 hover:bg-black/5 transition"
+                    className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm transition"
+                    style={{ color: "var(--theme-text-primary)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                     onClick={() => setMenuOpen(false)}
                   >
-                    <span className="text-gray-400">👤</span>
+                    <span style={{ color: "var(--theme-text-tertiary)" }}>👤</span>
                     Profile
                   </Link>
 
                   <Link
                     href="/badges"
-                    className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm text-gray-800 hover:bg-black/5 transition"
+                    className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm transition"
+                    style={{ color: "var(--theme-text-primary)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                     onClick={() => setMenuOpen(false)}
                   >
-                    <span className="text-gray-400">🏷️</span>
+                    <span style={{ color: "var(--theme-text-tertiary)" }}>🏷️</span>
                     Badges
                   </Link>
 
@@ -257,9 +284,12 @@ export default function Navbar() {
                       window.dispatchEvent(new Event("tb:auth-changed"));
                       router.push("/");
                     }}
-                    className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition"
+                    className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm transition"
+                    style={{ color: "var(--theme-error)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--theme-error)"; e.currentTarget.style.opacity = "0.1"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.opacity = "1"; }}
                   >
-                    <span className="text-red-400">⎋</span>
+                    <span style={{ color: "var(--theme-error)", opacity: 0.7 }}>⎋</span>
                     Logout
                   </button>
                 </div>

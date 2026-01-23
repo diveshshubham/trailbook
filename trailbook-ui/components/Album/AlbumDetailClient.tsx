@@ -19,6 +19,7 @@ import { resolveMediaUrl } from "@/lib/mediaUrl";
 import { useRouter } from "next/navigation";
 import type { MediaMeta } from "@/components/Album/Lightbox";
 import { getMediaReflectionsCount } from "@/lib/badgesApi";
+import { useTheme } from "@/contexts/ThemeContext";
 
 function formatSubtitle(createdAt?: string, location?: string) {
   const parts: string[] = [];
@@ -34,6 +35,8 @@ function formatSubtitle(createdAt?: string, location?: string) {
 
 export default function AlbumDetailClient({ albumId }: { albumId: string }) {
   const router = useRouter();
+  const { themeKey } = useTheme();
+  const isDefault = themeKey === "default";
   const [album, setAlbum] = useState<Album | null>(null);
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -340,7 +343,12 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
 
       <div className="max-w-7xl mx-auto -mt-10 relative z-10 px-6">
         <div className="mb-10">
-          <AlbumBadgesStrip albumId={albumId} canAssign />
+          <AlbumBadgesStrip 
+            albumId={albumId} 
+            canAssign 
+            albumOwnerId={(album as { userId?: string })?.userId}
+            isPublic={album?.isPublic ?? false}
+          />
         </div>
         <AlbumStory albumId={albumId} initialStory={album?.story} />
 
@@ -420,20 +428,47 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
             if (e.target === e.currentTarget) setEditOpen(false);
           }}
         >
-          <aside className="absolute top-0 right-0 bottom-0 w-[420px] max-w-[92vw] bg-white/95 backdrop-blur-xl border-l border-black/10 shadow-2xl">
-            <div className="px-6 pt-6 pb-5 border-b border-black/5 flex items-center justify-between">
+          <aside 
+            className="absolute top-0 right-0 bottom-0 w-[420px] max-w-[92vw] backdrop-blur-xl border-l shadow-2xl transition-colors duration-300"
+            style={{
+              backgroundColor: "var(--theme-backdrop)",
+              borderColor: "var(--theme-border)",
+            }}
+          >
+            <div 
+              className="px-6 pt-6 pb-5 border-b flex items-center justify-between transition-colors duration-300"
+              style={{ borderColor: "var(--theme-border)" }}
+            >
               <div>
-                <p className="text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+                <p 
+                  className="text-[10px] uppercase tracking-[0.35em] font-semibold"
+                  style={{ color: "var(--theme-text-tertiary)" }}
+                >
                   Album settings
                 </p>
-                <h3 className="mt-1 text-lg font-bold tracking-tight text-gray-900">
+                <h3 
+                  className="mt-1 text-lg font-bold tracking-tight"
+                  style={{ color: "var(--theme-text-primary)" }}
+                >
                   Edit details
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setEditOpen(false)}
-                className="h-10 w-10 rounded-full bg-black/5 hover:bg-black/10 transition grid place-items-center"
+                className="h-10 w-10 rounded-full transition grid place-items-center"
+                style={{
+                  backgroundColor: "var(--theme-surface-hover)",
+                  color: "var(--theme-text-secondary)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--theme-surface-elevated)";
+                  e.currentTarget.style.color = "var(--theme-text-primary)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+                  e.currentTarget.style.color = "var(--theme-text-secondary)";
+                }}
                 aria-label="Close"
                 title="Close"
               >
@@ -442,13 +477,25 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
             </div>
 
             <div className="px-6 py-6 space-y-5 overflow-auto h-full pb-32">
-              <div className="rounded-3xl border border-black/10 bg-gradient-to-br from-gray-50 to-white p-4">
+              <div 
+                className="rounded-3xl border p-4 transition-colors duration-300"
+                style={{
+                  borderColor: "var(--theme-border)",
+                  backgroundColor: "var(--theme-surface-elevated)",
+                }}
+              >
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+                    <p 
+                      className="text-[10px] uppercase tracking-[0.35em] font-semibold"
+                      style={{ color: "var(--theme-text-tertiary)" }}
+                    >
                       Cover image
                     </p>
-                    <p className="mt-1 text-sm text-gray-600">
+                    <p 
+                      className="mt-1 text-sm"
+                      style={{ color: "var(--theme-text-secondary)" }}
+                    >
                       Upload a new cover or set one from the gallery (bookmark icon).
                     </p>
                   </div>
@@ -456,7 +503,22 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
                     type="button"
                     onClick={onPickCover}
                     disabled={uploadingCover}
-                    className="shrink-0 rounded-full px-4 py-2 text-xs font-semibold bg-white border border-black/10 hover:bg-gray-50 transition disabled:opacity-60"
+                    className="shrink-0 rounded-full px-4 py-2 text-xs font-semibold border transition disabled:opacity-60"
+                    style={{
+                      backgroundColor: "var(--theme-surface)",
+                      borderColor: "var(--theme-border)",
+                      color: "var(--theme-text-primary)",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!uploadingCover) {
+                        e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!uploadingCover) {
+                        e.currentTarget.style.backgroundColor = "var(--theme-surface)";
+                      }
+                    }}
                   >
                     {uploadingCover ? "Uploading…" : "Upload cover"}
                   </button>
@@ -471,19 +533,40 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
               </div>
 
               <label className="block">
-                <span className="block text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+                <span 
+                  className="block text-[10px] uppercase tracking-[0.35em] font-semibold"
+                  style={{ color: "var(--theme-text-tertiary)" }}
+                >
                   Title
                 </span>
                 <input
                   value={albumDraft.title}
                   onChange={(e) => setAlbumDraft((p) => ({ ...p, title: e.target.value }))}
-                  className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-200"
+                  className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-colors duration-300"
+                  style={{
+                    borderColor: "var(--theme-border)",
+                    backgroundColor: "var(--theme-surface)",
+                    color: "var(--theme-text-primary)",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
+                    e.currentTarget.style.boxShadow = isDefault 
+                      ? "0 0 0 2px rgba(249, 115, 22, 0.2)" 
+                      : "0 0 0 2px var(--theme-accent-light)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "var(--theme-border)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
                   placeholder="My new album title"
                 />
               </label>
 
               <label className="block">
-                <span className="block text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+                <span 
+                  className="block text-[10px] uppercase tracking-[0.35em] font-semibold"
+                  style={{ color: "var(--theme-text-tertiary)" }}
+                >
                   Description
                 </span>
                 <textarea
@@ -492,14 +575,32 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
                     setAlbumDraft((p) => ({ ...p, description: e.target.value }))
                   }
                   rows={3}
-                  className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-200 resize-none"
+                  className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none resize-none transition-colors duration-300"
+                  style={{
+                    borderColor: "var(--theme-border)",
+                    backgroundColor: "var(--theme-surface)",
+                    color: "var(--theme-text-primary)",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
+                    e.currentTarget.style.boxShadow = isDefault 
+                      ? "0 0 0 2px rgba(249, 115, 22, 0.2)" 
+                      : "0 0 0 2px var(--theme-accent-light)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "var(--theme-border)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
                   placeholder="Updated desc"
                 />
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="block">
-                  <span className="block text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+                  <span 
+                    className="block text-[10px] uppercase tracking-[0.35em] font-semibold"
+                    style={{ color: "var(--theme-text-tertiary)" }}
+                  >
                     Location
                   </span>
                   <input
@@ -507,13 +608,31 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
                     onChange={(e) =>
                       setAlbumDraft((p) => ({ ...p, location: e.target.value }))
                     }
-                    className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-200"
+                    className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-colors duration-300"
+                    style={{
+                      borderColor: "var(--theme-border)",
+                      backgroundColor: "var(--theme-surface)",
+                      color: "var(--theme-text-primary)",
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
+                      e.currentTarget.style.boxShadow = isDefault 
+                        ? "0 0 0 2px rgba(249, 115, 22, 0.2)" 
+                        : "0 0 0 2px var(--theme-accent-light)";
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = "var(--theme-border)";
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
                     placeholder="Manali"
                   />
                 </label>
 
                 <label className="block">
-                  <span className="block text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+                  <span 
+                    className="block text-[10px] uppercase tracking-[0.35em] font-semibold"
+                    style={{ color: "var(--theme-text-tertiary)" }}
+                  >
                     Event date
                   </span>
                   <input
@@ -522,55 +641,126 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
                     onChange={(e) =>
                       setAlbumDraft((p) => ({ ...p, eventDate: e.target.value }))
                     }
-                    className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-200"
+                    className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-colors duration-300"
+                    style={{
+                      borderColor: "var(--theme-border)",
+                      backgroundColor: "var(--theme-surface)",
+                      color: "var(--theme-text-primary)",
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
+                      e.currentTarget.style.boxShadow = isDefault 
+                        ? "0 0 0 2px rgba(249, 115, 22, 0.2)" 
+                        : "0 0 0 2px var(--theme-accent-light)";
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = "var(--theme-border)";
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
                   />
                 </label>
               </div>
 
               <label className="block">
-                <span className="block text-[10px] uppercase tracking-[0.35em] text-gray-400 font-semibold">
+                <span 
+                  className="block text-[10px] uppercase tracking-[0.35em] font-semibold"
+                  style={{ color: "var(--theme-text-tertiary)" }}
+                >
                   Story
                 </span>
                 <textarea
                   value={albumDraft.story}
                   onChange={(e) => setAlbumDraft((p) => ({ ...p, story: e.target.value }))}
                   rows={6}
-                  className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-200 resize-none"
+                  className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none resize-none transition-colors duration-300"
+                  style={{
+                    borderColor: "var(--theme-border)",
+                    backgroundColor: "var(--theme-surface)",
+                    color: "var(--theme-text-primary)",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
+                    e.currentTarget.style.boxShadow = isDefault 
+                      ? "0 0 0 2px rgba(249, 115, 22, 0.2)" 
+                      : "0 0 0 2px var(--theme-accent-light)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "var(--theme-border)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
                   placeholder="Day 1..."
                 />
               </label>
 
-              <div className="flex items-center justify-between rounded-2xl border border-black/10 bg-white px-4 py-3">
+              <div 
+                className="flex items-center justify-between rounded-2xl border px-4 py-3 transition-colors duration-300"
+                style={{
+                  borderColor: "var(--theme-border)",
+                  backgroundColor: "var(--theme-surface)",
+                }}
+              >
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">Visibility</p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p 
+                    className="text-sm font-semibold"
+                    style={{ color: "var(--theme-text-primary)" }}
+                  >
+                    Visibility
+                  </p>
+                  <p 
+                    className="text-xs mt-1"
+                    style={{ color: "var(--theme-text-secondary)" }}
+                  >
                     {albumDraft.isPublic ? "Public album" : "Private album"}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setAlbumDraft((p) => ({ ...p, isPublic: !p.isPublic }))}
-                  className={[
-                    "h-9 w-16 rounded-full border transition relative",
-                    albumDraft.isPublic ? "bg-green-500/90 border-green-600/20" : "bg-black/5 border-black/10",
-                  ].join(" ")}
+                  className="h-9 w-16 rounded-full border transition relative"
+                  style={{
+                    backgroundColor: albumDraft.isPublic 
+                      ? (isDefault ? "rgba(16, 185, 129, 0.9)" : "var(--theme-success)")
+                      : "var(--theme-surface-hover)",
+                    borderColor: albumDraft.isPublic
+                      ? (isDefault ? "rgba(16, 185, 129, 0.2)" : "var(--theme-success)")
+                      : "var(--theme-border)",
+                  }}
                   aria-label="Toggle visibility"
                 >
                   <span
-                    className={[
-                      "absolute top-1 h-7 w-7 rounded-full bg-white shadow-sm transition-all",
-                      albumDraft.isPublic ? "left-8" : "left-1",
-                    ].join(" ")}
+                    className="absolute top-1 h-7 w-7 rounded-full shadow-sm transition-all"
+                    style={{
+                      backgroundColor: "var(--theme-surface)",
+                      left: albumDraft.isPublic ? "32px" : "4px",
+                    }}
                   />
                 </button>
               </div>
 
-              <div className="rounded-2xl border border-black/5 bg-gradient-to-br from-orange-50 to-white p-4 text-sm text-gray-700">
-                Tip: Use the bookmark icon on any photo to set it as your cover.
+              <div 
+                className="rounded-2xl border p-4 text-sm transition-colors duration-300"
+                style={{
+                  borderColor: "var(--theme-border)",
+                  backgroundColor: isDefault ? "rgb(255, 247, 237)" : "var(--theme-accent-light)",
+                }}
+              >
+                <p 
+                  style={{ 
+                    color: isDefault ? "rgb(154, 52, 18)" : "var(--theme-accent)",
+                  }}
+                >
+                  Tip: Use the bookmark icon on any photo to set it as your cover.
+                </p>
               </div>
             </div>
 
-            <div className="absolute bottom-0 left-0 right-0 p-6 bg-white/90 backdrop-blur-xl border-t border-black/5">
+            <div 
+              className="absolute bottom-0 left-0 right-0 p-6 backdrop-blur-xl border-t transition-colors duration-300"
+              style={{
+                backgroundColor: "var(--theme-backdrop)",
+                borderColor: "var(--theme-border)",
+              }}
+            >
               <button
                 type="button"
                 disabled={savingAlbum}
@@ -591,7 +781,15 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
                     setSavingAlbum(false);
                   }
                 }}
-                className="w-full rounded-full px-6 py-3 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-semibold shadow-lg shadow-orange-500/20 hover:opacity-95 active:scale-[0.99] transition disabled:opacity-60"
+                className="w-full rounded-full px-6 py-3 text-white font-semibold shadow-lg hover:opacity-95 active:scale-[0.99] transition disabled:opacity-60"
+                style={{
+                  background: isDefault 
+                    ? "linear-gradient(to right, #f97316, #ec4899)" 
+                    : "var(--theme-gradient-primary)",
+                  boxShadow: isDefault 
+                    ? "0 10px 15px -3px rgba(249, 115, 22, 0.2), 0 4px 6px -2px rgba(249, 115, 22, 0.1)" 
+                    : "0 10px 15px -3px var(--theme-shadow-strong), 0 4px 6px -2px var(--theme-shadow)",
+                }}
               >
                 {savingAlbum ? "Saving…" : "Save changes"}
               </button>

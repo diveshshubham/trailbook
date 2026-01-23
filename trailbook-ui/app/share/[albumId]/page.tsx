@@ -46,7 +46,7 @@ export default async function PublicAlbumPage({
   const photos = mediaItems.map((m) => resolveMediaUrl(m.url || m.key)).filter(Boolean) as string[];
 
   return (
-    <main className="bg-[#fafafa] min-h-screen">
+    <main className="min-h-screen transition-colors duration-300" style={{ backgroundColor: "var(--theme-background)" }}>
       <PublicAlbumGate albumId={params.albumId}>
         <AlbumHero
           title={title}
@@ -54,10 +54,23 @@ export default async function PublicAlbumPage({
           subtitle={subtitle || undefined}
           isPublic={true}
           protectImage
+          location={album?.location}
+          date={album?.createdAt ? (() => {
+            const d = new Date(album.createdAt);
+            if (!Number.isNaN(d.getTime())) {
+              return d.toLocaleString(undefined, { month: "short", year: "numeric" });
+            }
+            return undefined;
+          })() : undefined}
         />
         <div className="max-w-7xl mx-auto -mt-10 relative z-10 px-6">
           <div className="mb-10">
-            <AlbumBadgesStrip albumId={params.albumId} />
+            <AlbumBadgesStrip 
+              albumId={params.albumId} 
+              canAssign
+              albumOwnerId={album?.userId}
+              isPublic={true}
+            />
           </div>
           <AlbumStory initialStory={album?.story} />
           <div className="mt-10">
