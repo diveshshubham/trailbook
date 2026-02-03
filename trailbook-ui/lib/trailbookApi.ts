@@ -25,6 +25,17 @@ export type Album = {
   isPublic?: boolean;
   story?: string;
   photos?: string[];
+  // User information (for favorite albums)
+  user?: {
+    _id?: string;
+    id?: string;
+    fullName?: string;
+    bio?: string;
+    profilePicture?: string;
+  };
+  userId?: string; // Album owner's user ID
+  isOwnAlbum?: boolean;
+  favoritedAt?: string;
 };
 
 export type MediaItem = {
@@ -43,6 +54,9 @@ export type MediaItem = {
   tags?: string[];
   story?: string;
   isPublic?: boolean;
+  isArchived?: boolean;
+  // Album information (when fetched from archived media endpoint)
+  album?: Album;
 };
 
 export type MediaDetailsUpdate = {
@@ -560,3 +574,127 @@ export async function regenerateAlbumStory(albumId: string): Promise<{ story: st
   return data as { story: string };
 }
 
+// Archive and Delete Album Functions
+export async function archiveAlbum(albumId: string): Promise<Album> {
+  const res = await apiFetch<unknown>(`/albums/${encodeURIComponent(albumId)}/archive`, {
+    method: "PATCH",
+  });
+  const data = unwrapData(res);
+  const album = isRecord(data) && "album" in data ? data.album : data;
+  return album as Album;
+}
+
+export async function restoreAlbum(albumId: string): Promise<Album> {
+  const res = await apiFetch<unknown>(`/albums/${encodeURIComponent(albumId)}/restore`, {
+    method: "PATCH",
+  });
+  const data = unwrapData(res);
+  const album = isRecord(data) && "album" in data ? data.album : data;
+  return album as Album;
+}
+
+export async function deleteAlbum(albumId: string): Promise<void> {
+  await apiFetch<unknown>(`/albums/${encodeURIComponent(albumId)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function getArchivedAlbums(): Promise<Album[]> {
+  const res = await apiFetch<unknown>("/albums/archived");
+  const data = unwrapData(res);
+  if (isRecord(data) && Array.isArray(data.albums)) {
+    return data.albums
+      .filter((a): a is Record<string, unknown> => isRecord(a))
+      .map((a) => ({
+        ...(a as unknown as Album),
+        id: (typeof a._id === "string" && a._id) || (typeof a.id === "string" && a.id) || "",
+      }))
+      .filter((a) => Boolean(a.id));
+  }
+  if (Array.isArray(data)) {
+    return data
+      .filter((a): a is Record<string, unknown> => isRecord(a))
+      .map((a) => ({
+        ...(a as unknown as Album),
+        id: (typeof a._id === "string" && a._id) || (typeof a.id === "string" && a.id) || "",
+      }))
+      .filter((a) => Boolean(a.id));
+  }
+  return [];
+}
+
+// Archive and Delete Media Functions
+export async function archiveMedia(mediaId: string): Promise<MediaItem> {
+  const res = await apiFetch<unknown>(`/media/${encodeURIComponent(mediaId)}/archive`, {
+    method: "PATCH",
+  });
+  const data = unwrapData(res);
+  return (isRecord(data) && "media" in data ? data.media : data) as MediaItem;
+}
+
+export async function restoreMedia(mediaId: string): Promise<MediaItem> {
+  const res = await apiFetch<unknown>(`/media/${encodeURIComponent(mediaId)}/restore`, {
+    method: "PATCH",
+  });
+  const data = unwrapData(res);
+  return (isRecord(data) && "media" in data ? data.media : data) as MediaItem;
+}
+
+export async function deleteMedia(mediaId: string): Promise<void> {
+  await apiFetch<unknown>(`/media/${encodeURIComponent(mediaId)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function getArchivedMedia(albumId: string): Promise<MediaItem[]> {
+  const res = await apiFetch<unknown>(`/media/album/${encodeURIComponent(albumId)}/archived`);
+  const data = unwrapData(res);
+  if (isRecord(data) && Array.isArray(data.media)) {
+    return data.media as MediaItem[];
+  }
+  if (Array.isArray(data)) return data as MediaItem[];
+  return [];
+}
+
+export async function getAllArchivedMedia(): Promise<MediaItem[]> {
+  const res = await apiFetch<unknown>("/media/archived");
+  const data = unwrapData(res);
+  if (isRecord(data) && Array.isArray(data.media)) {
+    return data.media as MediaItem[];
+  }
+  if (Array.isArray(data)) return data as MediaItem[];
+  return [];
+}
+
+export async function deleteS3Object(payload: {
+  albumId: string;
+  key: string;
+}): Promise<void> {
+  await apiFetch<unknown>("/media/s3-object", {
+    method: "DELETE",
+    body: JSON.stringify(payload),
+  });
+}
+
+// Favorite albums
+export async function addToFavorites(albumId: string): Promise<void> {
+  await apiFetch<unknown>(`/albums/${encodeURIComponent(albumId)}/favorite`, {
+    method: "POST",
+  });
+}
+
+export async function removeFromFavorites(albumId: string): Promise<void> {
+  await apiFetch<unknown>(`/albums/${encodeURIComponent(albumId)}/favorite`, {
+    method: "DELETE",
+  });
+}
+
+export async function getFavoriteAlbums(): Promise<Album[]> {
+  const res = await apiFetch<unknown>("/albums/favorites");
+  const data = unwrapData(res);
+  if (isRecord(data) && Array.isArray(data.albums)) {
+    return data.albums as Album[];
+  }
+  if (Array.isArray(data)) return data as Album[];
+  return [];
+}

@@ -5,6 +5,9 @@ import AlbumHero from "@/components/Album/AlbumHero";
 import AlbumStory from "@/components/Album/AlbumStory";
 import AlbumPhotos from "@/components/Album/AlbumPhotos";
 import AlbumBadgesStrip from "@/components/Badges/AlbumBadgesStrip";
+import InviteModal from "@/components/PublicAlbums/InviteModal";
+import ContributorsList from "@/components/PublicAlbums/ContributorsList";
+import ActivityFeed from "@/components/PublicAlbums/ActivityFeed";
 import {
   getAlbumMedia,
   getMyAlbums,
@@ -12,6 +15,8 @@ import {
   updateAlbum,
   updateAlbumCover,
   updateMediaDetails,
+  getFavoriteAlbums,
+  getPublicAlbum,
   type Album,
   type MediaItem,
 } from "@/lib/trailbookApi";
@@ -20,6 +25,7 @@ import { useRouter } from "next/navigation";
 import type { MediaMeta } from "@/components/Album/Lightbox";
 import { getMediaReflectionsCount } from "@/lib/badgesApi";
 import { useTheme } from "@/contexts/ThemeContext";
+import StoryEditor from "@/components/Album/StoryEditor";
 
 function formatSubtitle(createdAt?: string, location?: string) {
   const parts: string[] = [];
@@ -48,6 +54,12 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
   const [uploadingCover, setUploadingCover] = useState(false);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const [reflectionCounts, setReflectionCounts] = useState<Record<string, number>>({});
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isOwnAlbum, setIsOwnAlbum] = useState(false);
+  const [isPublicContext, setIsPublicContext] = useState(false);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [showContributors, setShowContributors] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
   const [albumDraft, setAlbumDraft] = useState<{
     title: string;
     description: string;
@@ -90,24 +102,97 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
           return;
         }
 
-        const found = albums.find((a) => a.id === albumId || a._id === albumId) || null;
+        let found = albums.find((a) => a.id === albumId || a._id === albumId) || null;
+        let mediaData: MediaItem[] = [];
+        let isPublicAlbum = false;
+        let isOwn = Boolean(found);
+
+        // If not found in my albums, check if it's a favorite (public album)
         if (!found) {
-          setAlbum(null);
-          setMedia([]);
-          setError("Album not found.");
-          return;
+          try {
+            const favorites = await getFavoriteAlbums();
+            const favoriteAlbum = favorites.find((a) => (a.id || a._id) === albumId);
+            if (favoriteAlbum) {
+              // It's a public album that user favorited
+              found = favoriteAlbum;
+              isPublicAlbum = true;
+              isOwn = false;
+              setIsFavorite(true);
+              
+              // Fetch public album data with media
+              try {
+                const publicAlbumData = await getPublicAlbum({ albumId, limit: 100 });
+                if (publicAlbumData?.album) {
+                  found = publicAlbumData.album;
+                  // Convert public album media to MediaItem format
+                  mediaData = (publicAlbumData.media || []).map((m: any) => ({
+                    _id: m._id || m.id || "",
+                    albumId: albumId,
+                    key: m.key || m.url || "",
+                    contentType: m.contentType || "image/jpeg",
+                    size: m.size || 0,
+                    url: m.url || m.key,
+                    createdAt: m.createdAt || new Date().toISOString(),
+                    title: m.title,
+                    description: m.description,
+                    location: m.location,
+                    tags: m.tags,
+                    story: m.story,
+                    isPublic: m.isPublic,
+                  }));
+                }
+              } catch (err) {
+                console.error("Failed to load public album", err);
+                if (!cancelled) {
+                  setError("Couldn't load this album.");
+                  setAlbum(null);
+                  setMedia([]);
+                  return;
+                }
+              }
+            } else {
+              // Not found in my albums or favorites
+              if (!cancelled) {
+                setAlbum(null);
+                setMedia([]);
+                setError("Album not found.");
+                return;
+              }
+            }
+          } catch (err) {
+            console.error("Failed to check favorites", err);
+            if (!cancelled) {
+              setAlbum(null);
+              setMedia([]);
+              setError("Album not found.");
+              return;
+            }
+          }
+        } else {
+          // Found in my albums - check if it's in favorites
+          try {
+            const favorites = await getFavoriteAlbums();
+            const isFav = favorites.some((a) => (a.id || a._id) === albumId);
+            if (!cancelled) setIsFavorite(isFav);
+          } catch {
+            // Silently fail
+          }
+
+          // Load media for own album
+          const mediaDataRaw = await getAlbumMedia(albumId);
+          mediaData = [...mediaDataRaw].sort((a, b) => {
+            const ta = new Date(a.createdAt).getTime();
+            const tb = new Date(b.createdAt).getTime();
+            if (Number.isNaN(ta) || Number.isNaN(tb)) return 0;
+            return tb - ta; // latest first
+          });
         }
 
-        const mediaDataRaw = await getAlbumMedia(albumId);
-        const mediaData = [...mediaDataRaw].sort((a, b) => {
-          const ta = new Date(a.createdAt).getTime();
-          const tb = new Date(b.createdAt).getTime();
-          if (Number.isNaN(ta) || Number.isNaN(tb)) return 0;
-          return tb - ta; // latest first
-        });
-        if (!cancelled) {
+        if (!cancelled && found) {
           setAlbum(found);
           setMedia(mediaData);
+          setIsOwnAlbum(isOwn);
+          setIsPublicContext(isPublicAlbum);
         }
       } catch {
         if (!cancelled) {
@@ -334,23 +419,133 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
         </div>
       )}
 
+      {/* "This mattered to you." message for favorite albums */}
+      {isFavorite && (
+        <div className="max-w-7xl mx-auto px-6 pt-8 pb-2">
+          <p className="text-sm font-light tracking-wide opacity-60"
+            style={{ color: "var(--theme-text-secondary)" }}
+          >
+            This mattered to you.
+          </p>
+        </div>
+      )}
+
       <AlbumHero
         title={title}
         coverUrl={effectiveCoverUrl}
         subtitle={subtitle || undefined}
-        isPublic={album?.isPublic}
+        isPublic={album?.isPublic ?? isPublicContext}
+        albumId={albumId}
       />
 
-      <div className="max-w-7xl mx-auto -mt-10 relative z-10 px-6">
-        <div className="mb-10">
-          <AlbumBadgesStrip 
-            albumId={albumId} 
-            canAssign 
-            albumOwnerId={(album as { userId?: string })?.userId}
-            isPublic={album?.isPublic ?? false}
-          />
+      <div className="max-w-7xl mx-auto -mt-16 relative z-10 px-6">
+        <AlbumBadgesStrip 
+          albumId={albumId} 
+          canAssign 
+          albumOwnerId={(album as { userId?: string })?.userId}
+          isPublic={album?.isPublic ?? isPublicContext}
+        />
+        
+        {/* Collaboration Actions - Premium Compact Design */}
+        {album?.isPublic && (
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            {(isOwnAlbum || showContributors) && (
+              <button
+                type="button"
+                onClick={() => setShowContributors(!showContributors)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium border transition-all"
+                style={{
+                  backgroundColor: showContributors ? "var(--theme-accent-light)" : "var(--theme-surface-hover)",
+                  borderColor: showContributors ? "var(--theme-accent)" : "var(--theme-border)",
+                  color: showContributors ? "var(--theme-accent)" : "var(--theme-text-primary)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!showContributors) {
+                    e.currentTarget.style.backgroundColor = "var(--theme-surface-elevated)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!showContributors) {
+                    e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+                  }
+                }}
+              >
+                <span>👥</span>
+                <span>Contributors</span>
+              </button>
+            )}
+            {isOwnAlbum && (
+              <button
+                type="button"
+                onClick={() => setInviteModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-white transition-all"
+                style={{
+                  background: "var(--theme-gradient-primary)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = "0.9";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = "1";
+                }}
+              >
+                <span>+</span>
+                <span>Invite</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowActivity(!showActivity)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium border transition-all"
+              style={{
+                backgroundColor: showActivity ? "var(--theme-accent-light)" : "var(--theme-surface-hover)",
+                borderColor: showActivity ? "var(--theme-accent)" : "var(--theme-border)",
+                color: showActivity ? "var(--theme-accent)" : "var(--theme-text-primary)",
+              }}
+              onMouseEnter={(e) => {
+                if (!showActivity) {
+                  e.currentTarget.style.backgroundColor = "var(--theme-surface-elevated)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!showActivity) {
+                  e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+                }
+              }}
+            >
+              <span>📊</span>
+              <span>Activity</span>
+            </button>
+          </div>
+        )}
+
+        {/* Contributors Panel */}
+        {showContributors && album?.isPublic && (
+          <div className="mt-6 rounded-2xl border p-6" style={{ backgroundColor: "var(--theme-surface)", borderColor: "var(--theme-border)" }}>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: "var(--theme-text-primary)" }}>
+              Contributors
+            </h3>
+            <ContributorsList
+              albumId={albumId}
+              albumOwnerId={(album as { userId?: string })?.userId}
+              canManage={isOwnAlbum}
+            />
+          </div>
+        )}
+
+        {/* Activity Feed Panel */}
+        {showActivity && album?.isPublic && (
+          <div className="mt-6 rounded-2xl border p-6" style={{ backgroundColor: "var(--theme-surface)", borderColor: "var(--theme-border)" }}>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: "var(--theme-text-primary)" }}>
+              Recent Activity
+            </h3>
+            <ActivityFeed albumId={albumId} limit={10} />
+          </div>
+        )}
+        
+        <div className="mt-16">
+          <AlbumStory albumId={albumId} initialStory={album?.story} />
         </div>
-        <AlbumStory albumId={albumId} initialStory={album?.story} />
 
         <div className="mt-16">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
@@ -360,14 +555,17 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 sm:justify-end">
-              <button
-                onClick={() => setEditOpen(true)}
-                className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold tracking-wide bg-white border border-black/5 shadow-sm hover:shadow-md transition whitespace-nowrap"
-                title="Edit album details"
-              >
-                <span className="text-gray-800">✎</span>
-                <span className="text-gray-700">Edit</span>
-              </button>
+              {/* Only show Edit button for own albums */}
+              {isOwnAlbum && (
+                <button
+                  onClick={() => setEditOpen(true)}
+                  className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold tracking-wide bg-white border border-black/5 shadow-sm hover:shadow-md transition whitespace-nowrap"
+                  title="Edit album details"
+                >
+                  <span className="text-gray-800">✎</span>
+                  <span className="text-gray-700">Edit</span>
+                </button>
+              )}
               <button
                 onClick={() => {
                   setSlideshowToken((n) => n + 1);
@@ -394,7 +592,7 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
             albumId={albumId}
             photos={photos}
             mediaItems={mediaWithResolvedUrl}
-            showUpload
+            showUpload={isOwnAlbum}
             slideshowToken={slideshowToken}
             reflectionCounts={reflectionCounts}
             onSetCover={async (media) => {
@@ -429,7 +627,7 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
           }}
         >
           <aside 
-            className="absolute top-0 right-0 bottom-0 w-[420px] max-w-[92vw] backdrop-blur-xl border-l shadow-2xl transition-colors duration-300"
+            className="absolute top-0 right-0 bottom-0 w-[min(800px,95vw)] max-w-[95vw] backdrop-blur-xl border-l shadow-2xl transition-colors duration-300"
             style={{
               backgroundColor: "var(--theme-backdrop)",
               borderColor: "var(--theme-border)",
@@ -661,36 +859,20 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
                 </label>
               </div>
 
-              <label className="block">
+              <div className="block">
                 <span 
-                  className="block text-[10px] uppercase tracking-[0.35em] font-semibold"
+                  className="block text-[10px] uppercase tracking-[0.35em] font-semibold mb-3"
                   style={{ color: "var(--theme-text-tertiary)" }}
                 >
                   Story
                 </span>
-                <textarea
-                  value={albumDraft.story}
-                  onChange={(e) => setAlbumDraft((p) => ({ ...p, story: e.target.value }))}
-                  rows={6}
-                  className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none resize-none transition-colors duration-300"
-                  style={{
-                    borderColor: "var(--theme-border)",
-                    backgroundColor: "var(--theme-surface)",
-                    color: "var(--theme-text-primary)",
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
-                    e.currentTarget.style.boxShadow = isDefault 
-                      ? "0 0 0 2px rgba(249, 115, 22, 0.2)" 
-                      : "0 0 0 2px var(--theme-accent-light)";
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = "var(--theme-border)";
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
-                  placeholder="Day 1..."
+                <StoryEditor
+                  value={albumDraft.story || ""}
+                  onChange={(value) => setAlbumDraft((p) => ({ ...p, story: value }))}
+                  albumId={albumId}
+                  placeholder="Start writing your story... Use formatting tools above to make it beautiful!"
                 />
-              </label>
+              </div>
 
               <div 
                 className="flex items-center justify-between rounded-2xl border px-4 py-3 transition-colors duration-300"
@@ -801,6 +983,18 @@ export default function AlbumDetailClient({ albumId }: { albumId: string }) {
       <footer className="py-20 text-center text-gray-400 text-xs tracking-widest uppercase">
         © 2026 Trailbook Storyteller
       </footer>
+
+      {/* Invite Modal */}
+      {inviteModalOpen && (
+        <InviteModal
+          albumId={albumId}
+          isOpen={inviteModalOpen}
+          onClose={() => setInviteModalOpen(false)}
+          onInviteSent={() => {
+            setShowContributors(true);
+          }}
+        />
+      )}
     </main>
   );
 }

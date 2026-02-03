@@ -13,6 +13,7 @@ import {
   updateMyProfile,
   type MeProfile,
 } from "@/lib/userApi";
+import WalkedTogetherList from "@/components/TrailConnections/WalkedTogetherList";
 
 function parseTags(raw: string): string[] {
   return raw
@@ -476,8 +477,44 @@ export default function ProfilePageClient() {
       </div>
 
       <section className="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Walked Together Sidebar */}
+        <div className="lg:col-span-1 order-2 lg:order-1">
+          <div
+            className="rounded-3xl border shadow-sm p-6 transition-colors duration-300"
+            style={{
+              borderColor: "var(--theme-border)",
+              backgroundColor: "var(--theme-surface)",
+            }}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="h-8 w-8 rounded-xl border flex items-center justify-center"
+                style={{
+                  backgroundColor: isDefault ? "rgba(249, 115, 22, 0.2)" : "var(--theme-accent-light)",
+                  borderColor: isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)",
+                }}
+              >
+                <span className="text-base">👥</span>
+              </div>
+              <p
+                className="text-[10px] uppercase tracking-[0.4em] font-bold"
+                style={{ color: "var(--theme-text-tertiary)" }}
+              >
+                Walked Together
+              </p>
+            </div>
+            <p
+              className="text-xs mb-4 leading-relaxed"
+              style={{ color: "var(--theme-text-secondary)" }}
+            >
+              People you've shared trails with
+            </p>
+            <WalkedTogetherList />
+          </div>
+        </div>
+
         <div 
-          className="lg:col-span-2 rounded-3xl border shadow-sm p-8 transition-colors duration-300"
+          className="lg:col-span-2 order-1 lg:order-2 rounded-3xl border shadow-sm p-8 transition-colors duration-300"
           style={{
             borderColor: "var(--theme-border)",
             backgroundColor: "var(--theme-surface)",

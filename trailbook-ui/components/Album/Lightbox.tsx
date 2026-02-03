@@ -14,6 +14,8 @@ import {
   type ReflectionType,
 } from "@/lib/badgesApi";
 import { resolveMediaUrl } from "@/lib/mediaUrl";
+import ReflectionButton from "@/components/Reflections/ReflectionButton";
+import ClickableUserAvatar from "@/components/User/ClickableUserAvatar";
 
 export type MediaMeta = {
   title?: string;
@@ -45,6 +47,18 @@ type LightboxProps = {
   savingMeta?: boolean;
   initialDetailsOpen?: boolean;
   protectImages?: boolean;
+  onArchive?: (mediaId: string) => Promise<void> | void;
+  onDelete?: (mediaId: string) => Promise<void> | void;
+  isArchiving?: boolean;
+  isDeleting?: boolean;
+  showArchiveActions?: boolean;
+  /** Optional overrides for the archive/delete action buttons (used for restore+delete in archive flows). */
+  archiveActionLabel?: string;
+  archivingLabel?: string;
+  archiveActionVariant?: "warning" | "success" | "error" | "default";
+  deleteActionLabel?: string;
+  deletingLabel?: string;
+  deleteActionVariant?: "warning" | "success" | "error" | "default";
 };
 
 export default function Lightbox({
@@ -62,6 +76,17 @@ export default function Lightbox({
   savingMeta = false,
   initialDetailsOpen = false,
   protectImages = false,
+  onArchive,
+  onDelete,
+  isArchiving = false,
+  isDeleting = false,
+  showArchiveActions = false,
+  archiveActionLabel,
+  archivingLabel,
+  archiveActionVariant = "warning",
+  deleteActionLabel,
+  deletingLabel,
+  deleteActionVariant = "error",
 }: LightboxProps) {
   const { themeKey } = useTheme();
   const isDefault = themeKey === "default";
@@ -78,6 +103,7 @@ export default function Lightbox({
   const [storyOpen, setStoryOpen] = useState(false);
   const [viewerSheetOpen, setViewerSheetOpen] = useState(false);
   const [appreciationEmoji, setAppreciationEmoji] = useState<string | null>(null);
+  const [isAnimating, setIsAnimating] = useState(true);
   const storyScrollRef = useRef<HTMLDivElement | null>(null);
   const drawerScrollRef = useRef<HTMLDivElement | null>(null);
   const pendingDrawerWheelDelta = useRef<number | null>(null);
@@ -231,11 +257,21 @@ export default function Lightbox({
   if (!src) return null;
   if (typeof document === "undefined") return null;
 
+  // Trigger animation after mount
+  useEffect(() => {
+    const timer = setTimeout(() => setIsAnimating(false), 50);
+    return () => clearTimeout(timer);
+  }, []);
+
   const ui = (
     <div
-      className="fixed inset-0 z-[9999] bg-black"
+      className="fixed inset-0 z-[9999] bg-black transition-all duration-500 ease-out"
       role="dialog"
       aria-modal="true"
+      style={{
+        opacity: isAnimating ? 0 : 1,
+        clipPath: isAnimating ? "circle(0% at top right)" : "circle(150% at top right)",
+      }}
       onMouseDown={(e) => {
         // click outside closes
         if (e.target === e.currentTarget) onClose();
@@ -252,6 +288,12 @@ export default function Lightbox({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Reflection button */}
+          {mediaId && (
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <ReflectionButton mediaId={mediaId} variant="button" showCount={true} />
+            </div>
+          )}
           {/* Single top-right Edit entrypoint (works for add/edit) */}
           {canEditMeta && (
             <IconButton
@@ -338,7 +380,9 @@ export default function Lightbox({
           // Note: on some devices deltaY is inverted; in this app we map "up" to deltaY > 0.
           if (e.deltaY > 10) {
             pendingDrawerWheelDelta.current = e.deltaY;
-            if (isViewer) {
+            // Always allow viewer sheet for appreciation, even in edit mode
+            // Users should be able to appreciate their own photos and see who appreciated
+            if (isViewer || !detailsOpen) {
               setViewerSheetOpen(true);
             } else {
               setStoryOpen(true);
@@ -356,7 +400,14 @@ export default function Lightbox({
           }}
           onDoubleClick={onClose}
           onClick={() => {
-            if (!detailsOpen) setPlaying((p) => !p);
+            if (!detailsOpen) {
+              // If in edit mode, allow opening viewer sheet on tap for appreciation
+              if (!isViewer && !viewerSheetOpen) {
+                setViewerSheetOpen(true);
+              } else {
+                setPlaying((p) => !p);
+              }
+            }
           }}
           title="Double click to close"
         />
@@ -490,20 +541,32 @@ export default function Lightbox({
         )}
 
         {/* Premium bottom sheet for viewers (progressive: picker → list → details) */}
-        {!detailsOpen && viewerSheetOpen && isViewer && mediaId && (
+        {/* Allow viewer sheet even in edit mode so users can appreciate their own photos */}
+        {!detailsOpen && viewerSheetOpen && mediaId && (
           <ViewerReflectionsSheet
             mediaId={mediaId}
             meta={meta}
             onClose={() => setViewerSheetOpen(false)}
             drawerScrollRef={drawerScrollRef}
             setAppreciationEmoji={setAppreciationEmoji}
+            showArchiveActions={showArchiveActions}
+            onArchive={onArchive}
+            onDelete={onDelete}
+            isArchiving={isArchiving}
+            isDeleting={isDeleting}
+            archiveActionLabel={archiveActionLabel}
+            archivingLabel={archivingLabel}
+            archiveActionVariant={archiveActionVariant}
+            deleteActionLabel={deleteActionLabel}
+            deletingLabel={deletingLabel}
+            deleteActionVariant={deleteActionVariant}
           />
         )}
 
         {/* Subtle bottom hint */}
         <div className="absolute bottom-6 left-0 right-0 flex items-center justify-center text-white/30 text-xs tracking-wide pointer-events-none">
           <span>
-            {isViewer && !viewerSheetOpen ? "Scroll up or tap ✦ to appreciate · " : ""}
+            {!viewerSheetOpen ? "Scroll up or tap ✦ to appreciate · " : ""}
             Space / click to play-pause · Esc / double‑click to close
           </span>
         </div>
@@ -853,14 +916,50 @@ function ViewerReflectionsSheet({
   onClose,
   drawerScrollRef,
   setAppreciationEmoji,
+  showArchiveActions = false,
+  onArchive,
+  onDelete,
+  isArchiving = false,
+  isDeleting = false,
+  archiveActionLabel,
+  archivingLabel,
+  archiveActionVariant = "warning",
+  deleteActionLabel,
+  deletingLabel,
+  deleteActionVariant = "error",
 }: {
   mediaId: string | null;
   meta?: MediaMeta;
   onClose: () => void;
   drawerScrollRef: React.RefObject<HTMLDivElement | null>;
   setAppreciationEmoji: (emoji: string | null) => void;
+  showArchiveActions?: boolean;
+  onArchive?: (mediaId: string) => Promise<void> | void;
+  onDelete?: (mediaId: string) => Promise<void> | void;
+  isArchiving?: boolean;
+  isDeleting?: boolean;
+  archiveActionLabel?: string;
+  archivingLabel?: string;
+  archiveActionVariant?: "warning" | "success" | "error" | "default";
+  deleteActionLabel?: string;
+  deletingLabel?: string;
+  deleteActionVariant?: "warning" | "success" | "error" | "default";
 }) {
+  const { themeKey } = useTheme();
+  const isDefault = themeKey === "default";
   const storyScrollRef = useRef<HTMLDivElement | null>(null);
+  const actionColorVar = (variant: "warning" | "success" | "error" | "default") => {
+    switch (variant) {
+      case "success":
+        return "var(--theme-success)";
+      case "error":
+        return "var(--theme-error)";
+      case "warning":
+        return "var(--theme-warning)";
+      default:
+        return "var(--theme-accent)";
+    }
+  };
   const [types, setTypes] = useState<ReflectionType[]>([]);
   const [typesLoading, setTypesLoading] = useState(true);
   const [typesError, setTypesError] = useState<string | null>(null);
@@ -1181,19 +1280,199 @@ function ViewerReflectionsSheet({
                     <p className="text-white/45 text-[10px] uppercase tracking-[0.35em] font-semibold">
                       Story
                     </p>
-                    {/* Appreciate button aligned with Story heading */}
+                    {/* Archive/Delete buttons and Appreciate button */}
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                      {showArchiveActions && onArchive && onDelete && mediaId ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => onArchive(mediaId)}
+                            disabled={isArchiving || isDeleting}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all duration-200 backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{
+                              backgroundColor: actionColorVar(archiveActionVariant),
+                              borderColor: actionColorVar(archiveActionVariant),
+                              color: "white",
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isArchiving && !isDeleting) {
+                                e.currentTarget.style.opacity = "0.9";
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.opacity = "1";
+                            }}
+                          >
+                            <span className="text-xs font-semibold tracking-wide">
+                              {isArchiving ? (archivingLabel || "Archiving…") : (archiveActionLabel || "📦 Archive")}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDelete(mediaId)}
+                            disabled={isArchiving || isDeleting}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all duration-200 backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{
+                              backgroundColor: actionColorVar(deleteActionVariant),
+                              borderColor: actionColorVar(deleteActionVariant),
+                              color: "white",
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isArchiving && !isDeleting) {
+                                e.currentTarget.style.opacity = "0.9";
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.opacity = "1";
+                            }}
+                          >
+                            <span className="text-xs font-semibold tracking-wide">
+                              {isDeleting ? (deletingLabel || "Deleting…") : (deleteActionLabel || "✕ Delete")}
+                            </span>
+                          </button>
+                        </>
+                      ) : null}
+                      {/* Always show Appreciate button, even when archive actions are present */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowReflections(true);
+                          setTimeout(() => {
+                            reflectionsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }, 100);
+                        }}
+                        disabled={showReflections && myTypeId !== null}
+                        className={[
+                          "flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all duration-200 backdrop-blur-sm shrink-0",
+                          showReflections && myTypeId !== null
+                            ? "cursor-default"
+                            : "hover:scale-105"
+                        ].join(" ")}
+                        style={
+                          showReflections && myTypeId !== null
+                            ? {
+                                backgroundColor: isDefault ? "rgba(16, 185, 129, 0.2)" : "var(--theme-success)",
+                                borderColor: isDefault ? "rgba(16, 185, 129, 0.4)" : "var(--theme-success)",
+                                color: isDefault ? "rgba(209, 250, 229, 0.9)" : "var(--theme-text-inverse)",
+                                opacity: 0.3,
+                              }
+                            : {
+                                backgroundColor: isDefault ? "rgba(255, 255, 255, 0.1)" : "var(--theme-accent)",
+                                borderColor: isDefault ? "rgba(255, 255, 255, 0.2)" : "var(--theme-accent)",
+                                color: isDefault ? "rgba(255, 255, 255, 0.9)" : "var(--theme-text-inverse)",
+                              }
+                        }
+                        onMouseEnter={(e) => {
+                          if (!(showReflections && myTypeId !== null)) {
+                            if (!isDefault) {
+                              e.currentTarget.style.opacity = "0.9";
+                            } else {
+                              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
+                              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.3)";
+                            }
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!(showReflections && myTypeId !== null)) {
+                            if (!isDefault) {
+                              e.currentTarget.style.opacity = "1";
+                            } else {
+                              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+                              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.2)";
+                            }
+                          }
+                        }}
+                        aria-label={showReflections && myTypeId !== null ? "Appreciation sent" : "Appreciate this moment"}
+                      >
+                        <span className="text-lg">{showReflections && myTypeId !== null ? "✓" : "✦"}</span>
+                        <span className="text-xs font-semibold tracking-wide">
+                          {showReflections && myTypeId !== null ? "Appreciated" : "Appreciate"}
+                        </span>
+                        {count > 0 && (
+                          <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 border border-white/30 text-white text-[10px] font-bold min-w-[20px] text-center">
+                            {count}
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    ref={storyScrollRef}
+                    className="relative text-white/85 text-base leading-[1.85] font-light tracking-wide whitespace-pre-wrap max-w-full"
+                    style={{
+                      fontFamily: "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif",
+                      letterSpacing: "0.01em",
+                    }}
+                  >
+                    {meta.story}
+                  </div>
+                </div>
+              ) : (
+                /* If no story, show archive/delete buttons and appreciate button after details */
+                <div className="mt-6 flex justify-end">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {showArchiveActions && onArchive && onDelete && mediaId ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => onArchive(mediaId)}
+                          disabled={isArchiving || isDeleting}
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all duration-200 backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          style={{
+                            backgroundColor: actionColorVar(archiveActionVariant),
+                            borderColor: actionColorVar(archiveActionVariant),
+                            color: "white",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isArchiving && !isDeleting) {
+                              e.currentTarget.style.opacity = "0.9";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = "1";
+                          }}
+                        >
+                          <span className="text-xs font-semibold tracking-wide">
+                            {isArchiving ? (archivingLabel || "Archiving…") : (archiveActionLabel || "📦 Archive")}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDelete(mediaId)}
+                          disabled={isArchiving || isDeleting}
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all duration-200 backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          style={{
+                            backgroundColor: actionColorVar(deleteActionVariant),
+                            borderColor: actionColorVar(deleteActionVariant),
+                            color: "white",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isArchiving && !isDeleting) {
+                              e.currentTarget.style.opacity = "0.9";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = "1";
+                          }}
+                        >
+                          <span className="text-xs font-semibold tracking-wide">
+                            {isDeleting ? (deletingLabel || "Deleting…") : (deleteActionLabel || "✕ Delete")}
+                          </span>
+                        </button>
+                      </>
+                    ) : null}
+                    {/* Always show Appreciate button */}
                     <button
                       type="button"
                       onClick={() => {
                         setShowReflections(true);
-                        // Auto-scroll to reflections section after state update
                         setTimeout(() => {
                           reflectionsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
                         }, 100);
                       }}
                       disabled={showReflections && myTypeId !== null}
                       className={[
-                        "flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all duration-200 backdrop-blur-sm shrink-0",
+                        "flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all duration-200 backdrop-blur-sm",
                         showReflections && myTypeId !== null
                           ? "cursor-default"
                           : "hover:scale-105"
@@ -1245,25 +1524,69 @@ function ViewerReflectionsSheet({
                       )}
                     </button>
                   </div>
-                  <div
-                    ref={storyScrollRef}
-                    className="relative text-white/85 text-base leading-[1.85] font-light tracking-wide whitespace-pre-wrap max-w-full"
-                    style={{
-                      fontFamily: "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif",
-                      letterSpacing: "0.01em",
-                    }}
-                  >
-                    {meta.story}
-                  </div>
                 </div>
-              ) : (
-                /* If no story, show appreciate button after details */
-                <div className="mt-6 flex justify-end">
+              )}
+            </div>
+          )}
+
+          {/* Always show Archive/Delete buttons or Appreciate button if no meta exists */}
+          {!(meta?.location || meta?.description || meta?.tags?.length || meta?.story) && (
+            <div className="px-6 pt-6 pb-6">
+              <div className="flex justify-end">
+                {showArchiveActions && onArchive && onDelete && mediaId ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onArchive(mediaId)}
+                      disabled={isArchiving || isDeleting}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all duration-200 backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{
+                        backgroundColor: actionColorVar(archiveActionVariant),
+                        borderColor: actionColorVar(archiveActionVariant),
+                        color: "white",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isArchiving && !isDeleting) {
+                          e.currentTarget.style.opacity = "0.9";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = "1";
+                      }}
+                    >
+                      <span className="text-xs font-semibold tracking-wide">
+                        {isArchiving ? (archivingLabel || "Archiving…") : (archiveActionLabel || "📦 Archive")}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDelete(mediaId)}
+                      disabled={isArchiving || isDeleting}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all duration-200 backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{
+                        backgroundColor: actionColorVar(deleteActionVariant),
+                        borderColor: actionColorVar(deleteActionVariant),
+                        color: "white",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isArchiving && !isDeleting) {
+                          e.currentTarget.style.opacity = "0.9";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = "1";
+                      }}
+                    >
+                      <span className="text-xs font-semibold tracking-wide">
+                        {isDeleting ? (deletingLabel || "Deleting…") : (deleteActionLabel || "✕ Delete")}
+                      </span>
+                    </button>
+                  </div>
+                ) : (
                   <button
                     type="button"
                     onClick={() => {
                       setShowReflections(true);
-                      // Auto-scroll to reflections section after state update
                       setTimeout(() => {
                         reflectionsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
                       }, 100);
@@ -1272,43 +1595,9 @@ function ViewerReflectionsSheet({
                     className={[
                       "flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all duration-200 backdrop-blur-sm",
                       showReflections && myTypeId !== null
-                        ? "cursor-default"
-                        : "hover:scale-105"
+                        ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-300/90 cursor-default"
+                        : "bg-white/10 hover:bg-white/15 border-white/20 hover:border-white/30 text-white/90 hover:text-white hover:scale-105"
                     ].join(" ")}
-                    style={
-                      showReflections && myTypeId !== null
-                        ? {
-                            backgroundColor: isDefault ? "rgba(16, 185, 129, 0.2)" : "var(--theme-success)",
-                            borderColor: isDefault ? "rgba(16, 185, 129, 0.4)" : "var(--theme-success)",
-                            color: isDefault ? "rgba(209, 250, 229, 0.9)" : "var(--theme-text-inverse)",
-                            opacity: 0.3,
-                          }
-                        : {
-                            backgroundColor: isDefault ? "rgba(255, 255, 255, 0.1)" : "var(--theme-accent)",
-                            borderColor: isDefault ? "rgba(255, 255, 255, 0.2)" : "var(--theme-accent)",
-                            color: isDefault ? "rgba(255, 255, 255, 0.9)" : "var(--theme-text-inverse)",
-                          }
-                    }
-                    onMouseEnter={(e) => {
-                      if (!(showReflections && myTypeId !== null)) {
-                        if (!isDefault) {
-                          e.currentTarget.style.opacity = "0.9";
-                        } else {
-                          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
-                          e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.3)";
-                        }
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!(showReflections && myTypeId !== null)) {
-                        if (!isDefault) {
-                          e.currentTarget.style.opacity = "1";
-                        } else {
-                          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
-                          e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.2)";
-                        }
-                      }
-                    }}
                     aria-label={showReflections && myTypeId !== null ? "Appreciation sent" : "Appreciate this moment"}
                   >
                     <span className="text-lg">{showReflections && myTypeId !== null ? "✓" : "✦"}</span>
@@ -1321,42 +1610,7 @@ function ViewerReflectionsSheet({
                       </span>
                     )}
                   </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Always show "Appreciate" button if no meta exists */}
-          {!(meta?.location || meta?.description || meta?.tags?.length || meta?.story) && (
-            <div className="px-6 pt-6 pb-6">
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowReflections(true);
-                    setTimeout(() => {
-                      reflectionsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                    }, 100);
-                  }}
-                  disabled={showReflections && myTypeId !== null}
-                  className={[
-                    "flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all duration-200 backdrop-blur-sm",
-                    showReflections && myTypeId !== null
-                      ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-300/90 cursor-default"
-                      : "bg-white/10 hover:bg-white/15 border-white/20 hover:border-white/30 text-white/90 hover:text-white hover:scale-105"
-                  ].join(" ")}
-                  aria-label={showReflections && myTypeId !== null ? "Appreciation sent" : "Appreciate this moment"}
-                >
-                  <span className="text-lg">{showReflections && myTypeId !== null ? "✓" : "✦"}</span>
-                  <span className="text-xs font-semibold tracking-wide">
-                    {showReflections && myTypeId !== null ? "Appreciated" : "Appreciate"}
-                  </span>
-                  {count > 0 && (
-                    <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 border border-white/30 text-white text-[10px] font-bold min-w-[20px] text-center">
-                      {count}
-                    </span>
-                  )}
-                </button>
+                )}
               </div>
             </div>
           )}
@@ -1936,21 +2190,31 @@ function ReflectionsPanel({ mediaId }: { mediaId: string | null }) {
                 key={r.id}
                 className="rounded-2xl bg-black/25 border border-white/10 px-4 py-3 flex items-center gap-3"
               >
-                <div className="relative h-9 w-9 rounded-full overflow-hidden border border-white/10 bg-white/5 shrink-0">
-                  {resolveMediaUrl(r.user.profilePicture) ? (
-                    <Image
-                      src={resolveMediaUrl(r.user.profilePicture)!}
-                      alt={r.user.name || "User"}
-                      fill
-                      className="object-cover"
-                      sizes="36px"
-                    />
-                  ) : (
-                    <div className="h-full w-full grid place-items-center text-white/60 text-xs">
-                      {r.user.name?.slice(0, 1)?.toUpperCase() || "U"}
-                    </div>
-                  )}
-                </div>
+                {r.user.id ? (
+                  <ClickableUserAvatar
+                    userId={r.user.id}
+                    profilePicture={r.user.profilePicture}
+                    name={r.user.name}
+                    size="sm"
+                    className="shrink-0"
+                  />
+                ) : (
+                  <div className="relative h-9 w-9 rounded-full overflow-hidden border border-white/10 bg-white/5 shrink-0">
+                    {resolveMediaUrl(r.user.profilePicture) ? (
+                      <Image
+                        src={resolveMediaUrl(r.user.profilePicture)!}
+                        alt={r.user.name || "User"}
+                        fill
+                        className="object-cover"
+                        sizes="36px"
+                      />
+                    ) : (
+                      <div className="h-full w-full grid place-items-center text-white/60 text-xs">
+                        {r.user.name?.slice(0, 1)?.toUpperCase() || "U"}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="min-w-0 flex-1">
                   <p className="text-white/90 text-sm font-semibold truncate">

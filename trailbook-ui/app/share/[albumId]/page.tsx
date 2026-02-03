@@ -3,6 +3,7 @@ import AlbumStory from "@/components/Album/AlbumStory";
 import AlbumPhotos from "@/components/Album/AlbumPhotos";
 import PublicAlbumGate from "@/components/Share/PublicAlbumGate";
 import AlbumBadgesStrip from "@/components/Badges/AlbumBadgesStrip";
+import ScrollToTop from "@/components/Album/ScrollToTop";
 import { getPublicAlbum } from "@/lib/trailbookApi";
 import { resolveMediaUrl } from "@/lib/mediaUrl";
 import { notFound } from "next/navigation";
@@ -47,6 +48,7 @@ export default async function PublicAlbumPage({
 
   return (
     <main className="min-h-screen transition-colors duration-300" style={{ backgroundColor: "var(--theme-background)" }}>
+      <ScrollToTop />
       <PublicAlbumGate albumId={params.albumId}>
         <AlbumHero
           title={title}
@@ -55,6 +57,7 @@ export default async function PublicAlbumPage({
           isPublic={true}
           protectImage
           location={album?.location}
+          albumId={params.albumId}
           date={album?.createdAt ? (() => {
             const d = new Date(album.createdAt);
             if (!Number.isNaN(d.getTime())) {

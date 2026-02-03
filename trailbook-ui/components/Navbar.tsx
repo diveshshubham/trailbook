@@ -250,6 +250,18 @@ export default function Navbar() {
                   </Link>
 
                   <Link
+                    href="/favorites"
+                    className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm transition"
+                    style={{ color: "var(--theme-text-primary)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <span style={{ color: "var(--theme-text-tertiary)" }}>⭐</span>
+                    Worth Keeping
+                  </Link>
+
+                  <Link
                     href="/profile"
                     className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm transition"
                     style={{ color: "var(--theme-text-primary)" }}
@@ -271,6 +283,66 @@ export default function Navbar() {
                   >
                     <span style={{ color: "var(--theme-text-tertiary)" }}>🏷️</span>
                     Badges
+                  </Link>
+
+                  <Link
+                    href="/connections"
+                    className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm transition"
+                    style={{ color: "var(--theme-text-primary)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <span style={{ color: "var(--theme-text-tertiary)" }}>🔗</span>
+                    Connections
+                  </Link>
+
+                      <Link
+                        href="/chat"
+                        className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm transition"
+                        style={{ color: "var(--theme-text-primary)" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <span style={{ color: "var(--theme-text-tertiary)" }}>💬</span>
+                        Messages
+                      </Link>
+
+                      <Link
+                        href="/invitations"
+                        className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm transition"
+                        style={{ color: "var(--theme-text-primary)" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <span style={{ color: "var(--theme-text-tertiary)" }}>📬</span>
+                        Invitations
+                      </Link>
+
+                  <Link
+                    href="/archive"
+                    className="relative flex items-center gap-2 w-full text-left px-4 py-3 text-sm font-semibold transition rounded-lg"
+                    style={{ 
+                      color: "var(--theme-text-primary)",
+                      backgroundColor: "var(--theme-surface-hover)",
+                    }}
+                    onMouseEnter={(e) => { 
+                      e.currentTarget.style.backgroundColor = "var(--theme-surface-elevated)";
+                      e.currentTarget.style.color = "var(--theme-accent)";
+                    }}
+                    onMouseLeave={(e) => { 
+                      e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+                      e.currentTarget.style.color = "var(--theme-text-primary)";
+                    }}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <span className="text-base" style={{ color: "var(--theme-accent)" }}>📦</span>
+                    <span>Archive</span>
+                    <span className="ml-auto text-[10px] uppercase tracking-wider opacity-60" style={{ color: "var(--theme-text-tertiary)" }}>
+                      Manage
+                    </span>
                   </Link>
 
                   <button

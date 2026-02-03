@@ -7,6 +7,7 @@ import UploadDropzone from "./UploadDropzone";
 import Lightbox, { type LightboxItem, type MediaMeta } from "@/components/Album/Lightbox";
 import type { MediaItem } from "@/lib/trailbookApi";
 import { usePublicAlbumGate } from "@/components/Share/PublicAlbumGate";
+import ReflectionButton from "@/components/Reflections/ReflectionButton";
 
 type AlbumPhotosProps = {
   albumId?: string;
@@ -197,9 +198,16 @@ export default function AlbumPhotos({
             onSetCover={onSetCover && mediaItems?.[i] && !protectImages ? () => onSetCover(mediaItems[i]) : undefined}
             reflectionCount={getReflectionCountForIndex(i)}
             protectImage={protectImages}
+            mediaId={mediaItems?.[i]?._id}
+            albumId={albumId}
+            s3Key={mediaItems?.[i]?.key}
+            isArchived={mediaItems?.[i]?.isArchived}
             onMeasured={(isLandscape) =>
               setLandscapeBySrc((prev) => (prev[src] === isLandscape ? prev : { ...prev, [src]: isLandscape }))
             }
+            title={lightboxItems[i]?.meta?.title}
+            description={lightboxItems[i]?.meta?.description}
+            location={lightboxItems[i]?.meta?.location}
           />
         ))}
       </div>
@@ -240,6 +248,13 @@ export default function AlbumPhotos({
                 onMeasured={(isL) =>
                   setLandscapeBySrc((prev) => (prev[src] === isL ? prev : { ...prev, [src]: isL }))
                 }
+                mediaId={mediaItems?.[i]?._id}
+                albumId={albumId}
+                s3Key={mediaItems?.[i]?.key}
+                isArchived={mediaItems?.[i]?.isArchived}
+                title={lightboxItems[i]?.meta?.title}
+                description={lightboxItems[i]?.meta?.description}
+                location={lightboxItems[i]?.meta?.location}
               />
             );
           })}
@@ -277,11 +292,18 @@ export default function AlbumPhotos({
                   )}
                   onSetCover={onSetCover && mediaItems?.[0] && !protectImages ? () => onSetCover(mediaItems[0]) : undefined}
                   reflectionCount={getReflectionCountForIndex(0)}
+                  mediaId={mediaItems?.[0]?._id}
+                  albumId={albumId}
+                  s3Key={mediaItems?.[0]?.key}
+                  isArchived={mediaItems?.[0]?.isArchived}
                   onMeasured={(isL) =>
                     setLandscapeBySrc((prev) =>
                       prev[sources[0]] === isL ? prev : { ...prev, [sources[0]]: isL }
                     )
                   }
+                  title={lightboxItems[0]?.meta?.title}
+                  description={lightboxItems[0]?.meta?.description}
+                  location={lightboxItems[0]?.meta?.location}
                 />
               </div>
             )}
@@ -311,6 +333,10 @@ export default function AlbumPhotos({
                     onSetCover && mediaItems?.[row.idx] && !protectImages ? () => onSetCover(mediaItems[row.idx]) : undefined
                   }
                   reflectionCount={getReflectionCountForIndex(row.idx)}
+                  mediaId={mediaItems?.[row.idx]?._id}
+                  albumId={albumId}
+                  s3Key={mediaItems?.[row.idx]?.key}
+                  isArchived={mediaItems?.[row.idx]?.isArchived}
                   onMeasured={(isL) =>
                     setLandscapeBySrc((prev) => (prev[src] === isL ? prev : { ...prev, [src]: isL }))
                   }
@@ -338,9 +364,16 @@ export default function AlbumPhotos({
                     onSetCover && mediaItems?.[row.idx] && !protectImages ? () => onSetCover(mediaItems[row.idx]) : undefined
                   }
                   reflectionCount={getReflectionCountForIndex(row.idx)}
+                  mediaId={mediaItems?.[row.idx]?._id}
+                  albumId={albumId}
+                  s3Key={mediaItems?.[row.idx]?.key}
+                  isArchived={mediaItems?.[row.idx]?.isArchived}
                   onMeasured={(isL) =>
                     setLandscapeBySrc((prev) => (prev[src] === isL ? prev : { ...prev, [src]: isL }))
                   }
+                  title={lightboxItems[row.idx]?.meta?.title}
+                  description={lightboxItems[row.idx]?.meta?.description}
+                  location={lightboxItems[row.idx]?.meta?.location}
                 />
               );
             }
@@ -366,11 +399,18 @@ export default function AlbumPhotos({
                       onSetCover && mediaItems?.[row.left] && !protectImages ? () => onSetCover(mediaItems[row.left]) : undefined
                     }
                     reflectionCount={getReflectionCountForIndex(row.left)}
+                    mediaId={mediaItems?.[row.left]?._id}
+                    albumId={albumId}
+                    s3Key={mediaItems?.[row.left]?.key}
+                    isArchived={mediaItems?.[row.left]?.isArchived}
                     onMeasured={(isL) =>
                       setLandscapeBySrc((prev) =>
                         prev[leftSrc] === isL ? prev : { ...prev, [leftSrc]: isL }
                       )
                     }
+                    title={lightboxItems[row.left]?.meta?.title}
+                    description={lightboxItems[row.left]?.meta?.description}
+                    location={lightboxItems[row.left]?.meta?.location}
                   />
                   <PhotoCard
                     src={rightSrc}
@@ -388,11 +428,18 @@ export default function AlbumPhotos({
                       onSetCover && mediaItems?.[row.right] && !protectImages ? () => onSetCover(mediaItems[row.right]) : undefined
                     }
                     reflectionCount={getReflectionCountForIndex(row.right)}
+                    mediaId={mediaItems?.[row.right]?._id}
+                    albumId={albumId}
+                    s3Key={mediaItems?.[row.right]?.key}
+                    isArchived={mediaItems?.[row.right]?.isArchived}
                     onMeasured={(isL) =>
                       setLandscapeBySrc((prev) =>
                         prev[rightSrc] === isL ? prev : { ...prev, [rightSrc]: isL }
                       )
                     }
+                    title={lightboxItems[row.right]?.meta?.title}
+                    description={lightboxItems[row.right]?.meta?.description}
+                    location={lightboxItems[row.right]?.meta?.location}
                   />
                 </div>
               );
@@ -419,34 +466,48 @@ export default function AlbumPhotos({
                     onSetCover && mediaItems?.[row.left] ? () => onSetCover(mediaItems[row.left]) : undefined
                   }
                   reflectionCount={getReflectionCountForIndex(row.left)}
-                  onMeasured={(isL) =>
-                    setLandscapeBySrc((prev) =>
-                      prev[leftSrc] === isL ? prev : { ...prev, [leftSrc]: isL }
-                    )
-                  }
-                />
+                  mediaId={mediaItems?.[row.left]?._id}
+                  albumId={albumId}
+                  s3Key={mediaItems?.[row.left]?.key}
+                  isArchived={mediaItems?.[row.left]?.isArchived}
+                    onMeasured={(isL) =>
+                      setLandscapeBySrc((prev) =>
+                        prev[leftSrc] === isL ? prev : { ...prev, [leftSrc]: isL }
+                      )
+                    }
+                    title={lightboxItems[row.left]?.meta?.title}
+                    description={lightboxItems[row.left]?.meta?.description}
+                    location={lightboxItems[row.left]?.meta?.location}
+                  />
                 <PhotoCard
-                  src={rightSrc}
-                  index={row.right}
-                  frameClass="aspect-[3/4]"
-                  protectImage={protectImages}
-                  onOpen={() => open(row.right, false)}
-                  onInfo={() => open(row.right, false, true)}
-                  hasMeta={Boolean(
-                    lightboxItems[row.right]?.meta?.title ||
-                      lightboxItems[row.right]?.meta?.location ||
-                      lightboxItems[row.right]?.meta?.tags?.length
-                  )}
-                  onSetCover={
-                    onSetCover && mediaItems?.[row.right] ? () => onSetCover(mediaItems[row.right]) : undefined
-                  }
-                  reflectionCount={getReflectionCountForIndex(row.right)}
-                  onMeasured={(isL) =>
-                    setLandscapeBySrc((prev) =>
-                      prev[rightSrc] === isL ? prev : { ...prev, [rightSrc]: isL }
-                    )
-                  }
-                />
+                    src={rightSrc}
+                    index={row.right}
+                    frameClass="aspect-[3/4]"
+                    protectImage={protectImages}
+                    onOpen={() => open(row.right, false)}
+                    onInfo={() => open(row.right, false, true)}
+                    hasMeta={Boolean(
+                      lightboxItems[row.right]?.meta?.title ||
+                        lightboxItems[row.right]?.meta?.location ||
+                        lightboxItems[row.right]?.meta?.tags?.length
+                    )}
+                    onSetCover={
+                      onSetCover && mediaItems?.[row.right] ? () => onSetCover(mediaItems[row.right]) : undefined
+                    }
+                    reflectionCount={getReflectionCountForIndex(row.right)}
+                    mediaId={mediaItems?.[row.right]?._id}
+                    albumId={albumId}
+                    s3Key={mediaItems?.[row.right]?.key}
+                    isArchived={mediaItems?.[row.right]?.isArchived}
+                    onMeasured={(isL) =>
+                      setLandscapeBySrc((prev) =>
+                        prev[rightSrc] === isL ? prev : { ...prev, [rightSrc]: isL }
+                      )
+                    }
+                    title={lightboxItems[row.right]?.meta?.title}
+                    description={lightboxItems[row.right]?.meta?.description}
+                    location={lightboxItems[row.right]?.meta?.location}
+                  />
               </div>
             );
           })}
@@ -541,6 +602,13 @@ function PhotoCard({
   forceControlsVisible,
   blurBackground,
   protectImage,
+  mediaId,
+  albumId,
+  s3Key,
+  isArchived,
+  title,
+  description,
+  location,
 }: {
   src: string;
   index: number;
@@ -555,6 +623,13 @@ function PhotoCard({
   forceControlsVisible?: boolean;
   blurBackground?: boolean;
   protectImage?: boolean;
+  mediaId?: string;
+  albumId?: string;
+  s3Key?: string;
+  isArchived?: boolean;
+  title?: string;
+  description?: string;
+  location?: string;
 }) {
   return (
     <div
@@ -604,12 +679,10 @@ function PhotoCard({
         }}
       />
 
-      {/* Reflection count pill (only when > 0) */}
-      {reflectionCount > 0 && (
+      {/* Reflection button/badge */}
+      {mediaId && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-          <div className="px-3.5 py-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/10 text-white/90 text-[11px] font-semibold tracking-wide shadow-xl shadow-black/30">
-            ✦ {reflectionCount}
-          </div>
+          <ReflectionButton mediaId={mediaId} variant="badge" showCount={true} />
         </div>
       )}
 
@@ -678,12 +751,37 @@ function PhotoCard({
         </div>
       )}
 
-      {/* Elegant Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-8">
-        <span className="text-white/50 text-[10px] tracking-widest uppercase mb-2">
-          Moment {index + 1}
-        </span>
-        <p className="text-white font-medium text-sm tracking-wide">View fullscreen</p>
+
+
+      {/* Narrative Caption Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6 md:p-8">
+        {(title || description || location) ? (
+          <>
+            {title && (
+              <h4 className="text-white font-semibold text-base md:text-lg mb-2 leading-tight drop-shadow-lg">
+                {title}
+              </h4>
+            )}
+            {description && (
+              <p className="text-white/90 text-sm md:text-base mb-2 leading-relaxed line-clamp-2 drop-shadow-md">
+                {description}
+              </p>
+            )}
+            {location && (
+              <div className="flex items-center gap-1.5 text-white/70 text-xs md:text-sm">
+                <span>📍</span>
+                <span className="tracking-wide">{location}</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <span className="text-white/60 text-[10px] tracking-widest uppercase mb-2">
+              Moment {index + 1}
+            </span>
+            <p className="text-white/90 font-medium text-sm tracking-wide">View fullscreen</p>
+          </>
+        )}
       </div>
     </div>
   );

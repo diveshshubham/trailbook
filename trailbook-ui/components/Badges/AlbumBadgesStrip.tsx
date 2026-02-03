@@ -13,6 +13,7 @@ import { resolveMediaUrl } from "@/lib/mediaUrl";
 import { ApiError } from "@/lib/api";
 import { getMyProfile } from "@/lib/userApi";
 import { useTheme } from "@/contexts/ThemeContext";
+import ClickableUserAvatar from "@/components/User/ClickableUserAvatar";
 
 function isLoggedIn(): boolean {
   if (typeof window === "undefined") return false;
@@ -211,332 +212,165 @@ export default function AlbumBadgesStrip({
 
   return (
     <>
-      {/* Premium Badge Display Section */}
-      <section 
-        className="rounded-[32px] border shadow-lg overflow-hidden transition-colors duration-300"
-        style={{
-          borderColor: "var(--theme-border)",
-          backgroundColor: "var(--theme-surface)",
-          boxShadow: "0 10px 15px -3px var(--theme-shadow-strong), 0 4px 6px -2px var(--theme-shadow)",
-        }}
-      >
-        <div className="px-8 py-6 flex items-start justify-between gap-6">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-3 mb-3">
-              <div 
-                className="h-8 w-8 rounded-xl border flex items-center justify-center"
-                style={{
-                  backgroundColor: isDefault ? "rgba(249, 115, 22, 0.2)" : "var(--theme-accent-light)",
-                  borderColor: isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)",
-                  opacity: isDefault ? 1 : 0.8,
-                }}
-              >
+      {/* Subtle Compact Badge Section */}
+      {items.length > 0 || canActuallyAssign ? (
+        <section className="max-w-7xl mx-auto px-6 -mt-12 relative z-10">
+          <div 
+            className="rounded-2xl border backdrop-blur-xl overflow-hidden transition-all duration-300"
+            style={{
+              borderColor: "var(--theme-border)",
+              backgroundColor: "var(--theme-surface)",
+              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)",
+            }}
+          >
+            <div className="px-4 py-3 flex items-center justify-between gap-4">
+              {/* Compact header */}
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs opacity-60">🏆</span>
                 <span 
-                  className="text-sm"
-                  style={{ color: isDefault ? "rgb(234, 88, 12)" : "var(--theme-accent)" }}
+                  className="text-[9px] uppercase tracking-wider font-medium truncate"
+                  style={{ color: "var(--theme-text-tertiary)" }}
                 >
-                  🏆
+                  {items.length > 0 ? `${items.length} ${items.length === 1 ? 'badge' : 'badges'}` : 'Badges'}
                 </span>
               </div>
-              <p 
-                className="text-[10px] uppercase tracking-[0.4em] font-bold"
-                style={{ color: "var(--theme-text-tertiary)" }}
-              >
-                Album Badges
-              </p>
-            </div>
-            <p 
-              className="text-sm leading-relaxed max-w-2xl"
-              style={{ color: "var(--theme-text-secondary)" }}
-            >
-              Curated recognition — badges awarded to those who shaped this story.
-            </p>
-          </div>
 
-          {canActuallyAssign && (
-            <div className="flex flex-col items-end gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  if (!isLoggedIn()) {
-                    requestLogin();
-                    return;
-                  }
-                  setAssignOpen(true);
-                  setAssignError(null);
-                }}
-                className="shrink-0 rounded-full px-6 py-3 text-sm font-bold text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center gap-2"
-                style={{
-                  background: isDefault 
-                    ? "linear-gradient(to right, #f97316, #ec4899, #ef4444)" 
-                    : "var(--theme-gradient-primary)",
-                  boxShadow: isDefault 
-                    ? "0 10px 15px -3px rgba(249, 115, 22, 0.25), 0 4px 6px -2px rgba(249, 115, 22, 0.1)" 
-                    : "0 10px 15px -3px var(--theme-shadow-strong), 0 4px 6px -2px var(--theme-shadow)",
-                }}
-                onMouseEnter={(e) => {
-                  if (!isDefault) {
-                    e.currentTarget.style.boxShadow = "0 20px 25px -5px var(--theme-shadow-strong), 0 10px 10px -5px var(--theme-shadow)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isDefault) {
-                    e.currentTarget.style.boxShadow = "0 10px 15px -3px var(--theme-shadow-strong), 0 4px 6px -2px var(--theme-shadow)";
-                  }
-                }}
-                title="Assign one of your custom badges to this album"
-              >
-                <span className="text-base">+</span>
-                <span>Assign Badge</span>
-              </button>
-              <p 
-                className="text-[10px] text-right max-w-[140px]"
-                style={{ color: "var(--theme-text-tertiary)" }}
-              >
-                Assign your custom badges
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="px-8 pb-8">
-          {error ? (
-            <div 
-              className="rounded-2xl px-4 py-3 text-sm border transition-colors duration-300"
-              style={{
-                backgroundColor: isDefault ? "rgb(255, 247, 237)" : "var(--theme-accent-light)",
-                color: isDefault ? "rgb(154, 52, 18)" : "var(--theme-accent)",
-                borderColor: isDefault ? "rgb(254, 215, 170)" : "var(--theme-accent)",
-              }}
-            >
-              {error}
-            </div>
-          ) : loading ? (
-            <div className="flex gap-4 overflow-hidden">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-20 w-64 rounded-2xl border animate-pulse transition-colors duration-300"
-                  style={{
-                    borderColor: "var(--theme-border)",
-                    backgroundColor: "var(--theme-surface)",
+              {/* Assign button - subtle */}
+              {canActuallyAssign && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isLoggedIn()) {
+                      requestLogin();
+                      return;
+                    }
+                    setAssignOpen(true);
+                    setAssignError(null);
                   }}
-                />
-              ))}
-            </div>
-          ) : items.length === 0 ? (
-            <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.1)_transparent]">
-              {[
-                { name: "Summit Attempt", icon: "🏔", description: "Locked" },
-                { name: "High Altitude", icon: "❄️", description: "Locked" },
-                { name: "Alpine Start", icon: "🌄", description: "Locked" },
-              ].map((placeholder, idx) => (
-                <div
-                  key={idx}
-                  className="group relative shrink-0 w-[min(280px,75vw)] rounded-2xl border transition-all duration-300 p-4 flex items-center gap-4 opacity-60"
+                  className="shrink-0 rounded-full px-3 py-1.5 text-[10px] font-medium transition-all duration-200 hover:scale-105 active:scale-95"
                   style={{
-                    borderColor: "var(--theme-border)",
-                    backgroundColor: "var(--theme-surface-elevated)",
+                    backgroundColor: "var(--theme-surface-hover)",
+                    color: "var(--theme-text-secondary)",
+                    border: "1px solid var(--theme-border)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "var(--theme-surface-elevated)";
+                    e.currentTarget.style.borderColor = "var(--theme-accent)";
+                    e.currentTarget.style.color = "var(--theme-accent)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "var(--theme-surface-hover)";
+                    e.currentTarget.style.borderColor = "var(--theme-border)";
+                    e.currentTarget.style.color = "var(--theme-text-secondary)";
+                  }}
+                  title="Assign badge"
+                >
+                  + Assign
+                </button>
+              )}
+            </div>
+
+            {/* Compact badge strip */}
+            <div className="px-4 pb-3">
+              {error ? (
+                <div 
+                  className="rounded-xl px-3 py-2 text-xs border"
+                  style={{
+                    backgroundColor: "var(--theme-accent-light)",
+                    color: "var(--theme-accent)",
+                    borderColor: "var(--theme-accent)",
                   }}
                 >
-                  {/* Badge Logo Placeholder */}
-                  <div 
-                    className="relative h-16 w-16 rounded-2xl overflow-hidden border-2 shrink-0 transition-all"
-                    style={{
-                      borderColor: "var(--theme-border)",
-                      backgroundColor: "var(--theme-surface)",
-                    }}
-                  >
-                    <div 
-                      className="h-full w-full grid place-items-center text-2xl"
-                      style={{ color: "var(--theme-text-tertiary)" }}
-                    >
-                      {placeholder.icon}
-                    </div>
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p 
-                      className="text-sm font-bold truncate"
-                      style={{ color: "var(--theme-text-tertiary)" }}
-                    >
-                      {placeholder.name}
-                    </p>
-                    <p 
-                      className="text-xs truncate mt-0.5"
-                      style={{ color: "var(--theme-text-tertiary)" }}
-                    >
-                      {placeholder.description}
-                    </p>
-                  </div>
+                  {error}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.1)_transparent]">
-              {items.map((a) => {
-                const logoUrl = resolveMediaUrl(a.badge.logoKey);
-                return (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => setPreview(a)}
-                    className="group relative shrink-0 w-[min(380px,85vw)] rounded-2xl border transition-all duration-300 p-4 flex items-center gap-4 text-left"
-                    style={{
-                      borderColor: "var(--theme-border)",
-                      backgroundColor: "var(--theme-surface)",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
-                      e.currentTarget.style.boxShadow = isDefault 
-                        ? "0 20px 25px -5px rgba(249, 115, 22, 0.1), 0 10px 10px -5px rgba(249, 115, 22, 0.05)" 
-                        : "0 20px 25px -5px var(--theme-shadow-strong), 0 10px 10px -5px var(--theme-shadow)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = "var(--theme-border)";
-                      e.currentTarget.style.boxShadow = "none";
-                    }}
-                  >
-                    {/* Badge Logo with Premium Hover Effect */}
-                    <div 
-                      className="relative h-16 w-16 rounded-2xl overflow-hidden border-2 transition-all duration-300 group-hover:scale-125 shrink-0"
+              ) : loading ? (
+                <div className="flex gap-2 overflow-hidden">
+                  {Array.from({ length: 2 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-12 w-24 rounded-xl border animate-pulse"
                       style={{
                         borderColor: "var(--theme-border)",
-                        backgroundColor: "var(--theme-surface-elevated)",
+                        backgroundColor: "var(--theme-surface)",
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
-                        e.currentTarget.style.boxShadow = isDefault 
-                          ? "0 10px 15px -3px rgba(249, 115, 22, 0.2)" 
-                          : "0 10px 15px -3px var(--theme-shadow-strong)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = "var(--theme-border)";
-                        e.currentTarget.style.boxShadow = "none";
-                      }}
-                    >
-                      {logoUrl ? (
-                        <Image
-                          src={logoUrl}
-                          alt={`${a.badge.name} logo`}
-                          fill
-                          className="object-contain p-2 transition-transform duration-300 group-hover:scale-110"
-                          sizes="64px"
-                        />
-                      ) : (
-                        <div 
-                          className="h-full w-full grid place-items-center text-xl transition-colors"
-                          style={{ color: "var(--theme-text-tertiary)" }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.color = isDefault ? "rgb(234, 88, 12)" : "var(--theme-accent)";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.color = "var(--theme-text-tertiary)";
-                          }}
-                        >
-                          ✦
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p 
-                        className="text-sm font-bold truncate transition-colors"
-                        style={{ color: "var(--theme-text-primary)" }}
+                    />
+                  ))}
+                </div>
+              ) : items.length === 0 ? null : (
+                <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+                  {items.map((a) => {
+                    const logoUrl = resolveMediaUrl(a.badge.logoKey);
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => setPreview(a)}
+                        className="group relative shrink-0 rounded-xl border transition-all duration-200 p-2.5 flex items-center gap-2.5 text-left hover:scale-105"
+                        style={{
+                          borderColor: "var(--theme-border)",
+                          backgroundColor: "var(--theme-surface-elevated)",
+                        }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.color = isDefault ? "rgb(234, 88, 12)" : "var(--theme-accent)";
+                          e.currentTarget.style.borderColor = "var(--theme-accent)";
+                          e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1)";
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.color = "var(--theme-text-primary)";
+                          e.currentTarget.style.borderColor = "var(--theme-border)";
+                          e.currentTarget.style.boxShadow = "none";
                         }}
                       >
-                        {a.badge.name}
-                      </p>
-                      <p 
-                        className="text-xs truncate mt-0.5"
-                        style={{ color: "var(--theme-text-secondary)" }}
-                      >
-                        Awarded to {a.assignee?.name || "someone"}
-                      </p>
-                      {a.badge.description && (
-                        <p 
-                          className="text-xs line-clamp-1 mt-1"
-                          style={{ color: "var(--theme-text-tertiary)" }}
-                        >
-                          {a.badge.description}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Assignee Avatar */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const url = resolveMediaUrl(a.assignee?.profilePicture);
-                        if (url) {
-                          setProfilePictureViewer({ url, name: a.assignee?.name || "Assignee" });
-                        }
-                      }}
-                      className="relative h-10 w-10 rounded-full overflow-hidden border-2 shadow-sm ring-1 shrink-0 hover:scale-125 hover:z-10 transition-all cursor-pointer"
-                      style={{
-                        borderColor: "var(--theme-surface)",
-                        backgroundColor: "var(--theme-surface-elevated)",
-                        ringColor: "var(--theme-border)",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.ringColor = isDefault ? "rgba(249, 115, 22, 0.5)" : "var(--theme-accent)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.ringColor = "var(--theme-border)";
-                      }}
-                    >
-                      {resolveMediaUrl(a.assignee?.profilePicture) ? (
-                        <Image
-                          src={resolveMediaUrl(a.assignee.profilePicture)!}
-                          alt={a.assignee?.name || "Assignee"}
-                          fill
-                          className="object-cover"
-                          sizes="40px"
-                        />
-                      ) : (
+                        {/* Compact Badge Icon */}
                         <div 
-                          className="h-full w-full grid place-items-center text-xs font-bold"
+                          className="relative h-10 w-10 rounded-lg overflow-hidden border shrink-0"
                           style={{
-                            color: "var(--theme-text-primary)",
+                            borderColor: "var(--theme-border)",
                             backgroundColor: "var(--theme-surface)",
                           }}
                         >
-                          {(a.assignee?.name || "U").slice(0, 1).toUpperCase()}
+                          {logoUrl ? (
+                            <Image
+                              src={logoUrl}
+                              alt={a.badge.name}
+                              fill
+                              className="object-contain p-1.5"
+                              sizes="40px"
+                            />
+                          ) : (
+                            <div 
+                              className="h-full w-full grid place-items-center text-lg"
+                              style={{ color: "var(--theme-text-tertiary)" }}
+                            >
+                              ✦
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </button>
-
-                    {/* Hover Arrow Indicator */}
-                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        style={{ color: isDefault ? "rgb(234, 88, 12)" : "var(--theme-accent)" }}
-                      >
-                        <path
-                          d="M9 18L15 12L9 6"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </div>
-                  </button>
-                );
-              })}
+                        
+                        {/* Compact Badge Info */}
+                        <div className="min-w-0 flex-1">
+                          <p 
+                            className="text-xs font-semibold truncate"
+                            style={{ color: "var(--theme-text-primary)" }}
+                          >
+                            {a.badge.name}
+                          </p>
+                          {a.assignee?.name && (
+                            <p 
+                              className="text-[10px] truncate mt-0.5 opacity-70"
+                              style={{ color: "var(--theme-text-secondary)" }}
+                            >
+                              {a.assignee.name}
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      ) : null}
 
       {/* Premium Badge Detail Modal */}
       {preview && (

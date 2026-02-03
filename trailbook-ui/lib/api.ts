@@ -74,7 +74,19 @@ export async function apiFetch<T = unknown>(
   const { token: tokenOverride, auth = true, headers, baseUrl: _baseUrl, ...rest } = options;
   const token = tokenOverride ?? safeGetTokenFromLocalStorage();
 
-  const res = await fetch(`${baseUrl}${endpoint}`, {
+  // Ensure endpoint starts with /
+  const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const fullUrl = `${baseUrl}${normalizedEndpoint}`;
+
+  // Debug logging for 404 errors
+  if (process.env.NODE_ENV === "development") {
+    console.log(`[apiFetch] ${options.method || "GET"} ${fullUrl}`, {
+      auth,
+      hasToken: !!token,
+    });
+  }
+
+  const res = await fetch(fullUrl, {
     ...rest,
     headers: {
       "Content-Type": "application/json",
@@ -86,6 +98,16 @@ export async function apiFetch<T = unknown>(
   const data = await parseJsonSafely(res);
 
   if (!res.ok) {
+    // Enhanced error logging for 404s
+    if (res.status === 404 && process.env.NODE_ENV === "development") {
+      console.error(`[apiFetch] 404 Not Found: ${fullUrl}`, {
+        endpoint,
+        baseUrl,
+        normalizedEndpoint,
+        fullUrl,
+        response: data,
+      });
+    }
     const message =
       getMessageFromErrorPayload(data) ??
       `Request failed: ${res.status} ${res.statusText}`;
